@@ -1,14 +1,14 @@
 ﻿using BluePointLilac.Controls;
 using BluePointLilac.Methods;
-using ContextMenuManager.Controls.Interfaces;
-using ContextMenuManager.Methods;
+using Rmemu.Controls.Interfaces;
+using Rmemu.Methods;
 using System;
 using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
-using static ContextMenuManager.Methods.ObjectPath;
+using static Rmemu.Methods.ObjectPath;
 
-namespace ContextMenuManager.Controls
+namespace Rmemu.Controls
 {
     class FoldSubItem : MyListItem
     {

@@ -1,7 +1,7 @@
 ﻿using BluePointLilac.Controls;
-using ContextMenuManager.Methods;
+using Rmemu.Methods;
 
-namespace ContextMenuManager.Controls.Interfaces
+namespace Rmemu.Controls.Interfaces
 {
     interface IChkVisibleItem
     {

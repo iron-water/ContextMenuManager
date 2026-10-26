@@ -1,9 +1,9 @@
 ﻿using BluePointLilac.Methods;
-using ContextMenuManager.Properties;
+using Rmemu.Properties;
 using System.Drawing;
 using System.Windows.Forms;
 
-namespace ContextMenuManager.Methods
+namespace Rmemu.Methods
 {
     static class AppImage
     {

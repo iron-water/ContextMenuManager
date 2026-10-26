@@ -1,6 +1,6 @@
 ﻿using BluePointLilac.Methods;
-using ContextMenuManager.Controls.Interfaces;
-using ContextMenuManager.Methods;
+using Rmemu.Controls.Interfaces;
+using Rmemu.Methods;
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
@@ -9,7 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Xml;
 
-namespace ContextMenuManager.Controls
+namespace Rmemu.Controls
 {
     sealed class EnhanceShellItem : FoldSubItem, IChkVisibleItem
     {

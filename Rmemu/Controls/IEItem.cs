@@ -1,13 +1,13 @@
 ﻿using BluePointLilac.Controls;
 using BluePointLilac.Methods;
-using ContextMenuManager.Controls.Interfaces;
-using ContextMenuManager.Methods;
+using Rmemu.Controls.Interfaces;
+using Rmemu.Methods;
 using Microsoft.Win32;
 using System;
 using System.Drawing;
 using System.Windows.Forms;
 
-namespace ContextMenuManager.Controls
+namespace Rmemu.Controls
 {
     sealed class IEItem : MyListItem, ITsiRegPathItem, ITsiFilePathItem, ITsiRegDeleteItem, ITsiCommandItem,
         ITsiWebSearchItem, ITsiTextItem, ITsiRegExportItem, IBtnShowMenuItem, IChkVisibleItem

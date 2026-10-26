@@ -1,7 +1,7 @@
 ﻿using BluePointLilac.Controls;
 using BluePointLilac.Methods;
-using ContextMenuManager.Controls.Interfaces;
-using ContextMenuManager.Methods;
+using Rmemu.Controls.Interfaces;
+using Rmemu.Methods;
 using Microsoft.Win32;
 using System;
 using System.Drawing;
@@ -9,7 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 
-namespace ContextMenuManager.Controls
+namespace Rmemu.Controls
 {
     /* 新建菜单项成立条件与相关规则:（恶心的关联方式，反复研究了好久）
      * 

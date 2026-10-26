@@ -1,8 +1,8 @@
 ﻿using BluePointLilac.Controls;
-using ContextMenuManager.Methods;
+using Rmemu.Methods;
 using System.Windows.Forms;
 
-namespace ContextMenuManager.Controls.Interfaces
+namespace Rmemu.Controls.Interfaces
 {
     interface IBtnShowMenuItem
     {

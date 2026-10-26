@@ -1,10 +1,10 @@
 ﻿using BluePointLilac.Methods;
-using ContextMenuManager.Methods;
+using Rmemu.Methods;
 using System;
 using System.IO;
 using System.Windows.Forms;
 
-namespace ContextMenuManager.Controls.Interfaces
+namespace Rmemu.Controls.Interfaces
 {
     interface ITsiRegExportItem
     {

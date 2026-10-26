@@ -1,12 +1,12 @@
 ﻿using BluePointLilac.Methods;
-using ContextMenuManager.Controls.Interfaces;
-using ContextMenuManager.Methods;
+using Rmemu.Controls.Interfaces;
+using Rmemu.Methods;
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.Windows.Forms;
 
-namespace ContextMenuManager.Controls
+namespace Rmemu.Controls
 {
     sealed class ShellExItem : FoldSubItem, IChkVisibleItem, IBtnShowMenuItem, ITsiGuidItem,
         ITsiWebSearchItem, ITsiFilePathItem, ITsiRegPathItem, ITsiRegDeleteItem, ITsiRegExportItem, IProtectOpenItem

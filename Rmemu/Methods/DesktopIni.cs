@@ -1,7 +1,7 @@
 ﻿using BluePointLilac.Methods;
 using System.IO;
 
-namespace ContextMenuManager.Methods
+namespace Rmemu.Methods
 {
     static class DesktopIni
     {

@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace ContextMenuManager.Methods
+namespace Rmemu.Methods
 {
     static class ObjectPath
     {

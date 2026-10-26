@@ -1,14 +1,14 @@
 ﻿using BluePointLilac.Controls;
 using BluePointLilac.Methods;
-using ContextMenuManager.Controls.Interfaces;
-using ContextMenuManager.Methods;
+using Rmemu.Controls.Interfaces;
+using Rmemu.Methods;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Reflection;
 using System.Windows.Forms;
 
-namespace ContextMenuManager.Controls
+namespace Rmemu.Controls
 {
     sealed class ShellSubMenuDialog : CommonDialog
     {

@@ -1,10 +1,10 @@
 ﻿using BluePointLilac.Controls;
 using BluePointLilac.Methods;
-using ContextMenuManager.Methods;
+using Rmemu.Methods;
 using System.Drawing;
 using System.Windows.Forms;
 
-namespace ContextMenuManager.Controls
+namespace Rmemu.Controls
 {
     sealed class SubItemsForm : Form
     {

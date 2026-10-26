@@ -1,9 +1,9 @@
 ﻿using BluePointLilac.Methods;
-using ContextMenuManager.Methods;
+using Rmemu.Methods;
 using System;
 using System.Windows.Forms;
 
-namespace ContextMenuManager
+namespace Rmemu
 {
     //兼容.Net3.5和.Net4.0，兼容Vista - Win11
     static class Program

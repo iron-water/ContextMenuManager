@@ -7,7 +7,7 @@ using System.IO;
 using System.Text;
 using System.Xml;
 
-namespace ContextMenuManager.Methods
+namespace Rmemu.Methods
 {
     static class XmlDicHelper
     {

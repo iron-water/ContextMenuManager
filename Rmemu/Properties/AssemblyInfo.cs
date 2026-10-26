@@ -1,11 +1,11 @@
 ﻿using System.Reflection;
 using System.Runtime.InteropServices;
 
-[assembly: AssemblyTitle("Windows右键管理")]
-[assembly: AssemblyDescription("Windows右键管理")]
+[assembly: AssemblyTitle("Rmemu - Windows右键管理")]
+[assembly: AssemblyDescription("Rmemu - Windows右键管理")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("蓝点lilac")]
-[assembly: AssemblyProduct("Windows右键管理")]
+[assembly: AssemblyProduct("Rmemu")]
 [assembly: AssemblyCopyright("Copyright @ 2020-2021 蓝点lilac")]
 [assembly: AssemblyTrademark("蓝点lilac")]
 [assembly: AssemblyCulture("")]

@@ -3,7 +3,7 @@ using Microsoft.Win32;
 using System;
 using System.IO;
 
-namespace ContextMenuManager.Methods
+namespace Rmemu.Methods
 {
     static class UwpHelper
     {

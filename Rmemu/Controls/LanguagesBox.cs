@@ -1,6 +1,6 @@
 ﻿using BluePointLilac.Controls;
 using BluePointLilac.Methods;
-using ContextMenuManager.Methods;
+using Rmemu.Methods;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -11,7 +11,7 @@ using System.Text;
 using System.Windows.Forms;
 using System.Xml;
 
-namespace ContextMenuManager.Controls
+namespace Rmemu.Controls
 {
     sealed class LanguagesBox : FlowLayoutPanel
     {

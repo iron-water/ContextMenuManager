@@ -7,7 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 
-namespace ContextMenuManager.Methods
+namespace Rmemu.Methods
 {
     static class AppConfig
     {
@@ -39,7 +39,7 @@ namespace ContextMenuManager.Methods
         public const string GiteeDonate = "https://gitee.com/BluePointLilac/ContextMenuManager/blob/master/Donate.md";
 
         public static readonly string AppConfigDir = $@"{Application.StartupPath}\Config";
-        public static readonly string AppDataDir = Environment.ExpandEnvironmentVariables(@"%AppData%\ContextMenuManager");
+        public static readonly string AppDataDir = Environment.ExpandEnvironmentVariables(@"%AppData%\Rmemu");
         public static readonly string AppDataConfigDir = $@"{AppDataDir}\Config";
         public static readonly string ConfigDir = Directory.Exists(AppConfigDir) ? AppConfigDir : AppDataConfigDir;
         public static readonly bool SaveToAppDir = ConfigDir == AppConfigDir;

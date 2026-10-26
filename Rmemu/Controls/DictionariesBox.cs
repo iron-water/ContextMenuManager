@@ -1,13 +1,13 @@
 ﻿using BluePointLilac.Controls;
 using BluePointLilac.Methods;
-using ContextMenuManager.Methods;
+using Rmemu.Methods;
 using System;
 using System.Drawing;
 using System.IO;
 using System.Text;
 using System.Windows.Forms;
 
-namespace ContextMenuManager.Controls
+namespace Rmemu.Controls
 {
     sealed class DictionariesBox : TabControl
     {

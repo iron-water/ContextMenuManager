@@ -5,7 +5,7 @@ using System.IO;
 using System.Windows.Forms;
 using System.Xml;
 
-namespace ContextMenuManager.Methods
+namespace Rmemu.Methods
 {
     sealed class Updater
     {

@@ -1,10 +1,10 @@
 ﻿using BluePointLilac.Methods;
-using ContextMenuManager.Methods;
+using Rmemu.Methods;
 using System;
 using System.Drawing;
 using System.Xml;
 
-namespace ContextMenuManager.Controls
+namespace Rmemu.Controls
 {
     sealed class EnhanceMenusList : SwitchDicList
     {

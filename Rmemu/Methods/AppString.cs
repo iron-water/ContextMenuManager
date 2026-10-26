@@ -1,9 +1,9 @@
-using BluePointLilac.Methods;
+﻿using BluePointLilac.Methods;
 using System;
 using System.Reflection;
 using System.Text;
 
-namespace ContextMenuManager.Methods
+namespace Rmemu.Methods
 {
     static class AppString
     {

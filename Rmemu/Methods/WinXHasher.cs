@@ -7,7 +7,7 @@ using System.Security;
 using System.Text;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
-namespace ContextMenuManager.Methods
+namespace Rmemu.Methods
 {
     /// 代码用途：添加WinX菜单项目
     /// 参考代码1：https://github.com/riverar/hashlnk/blob/master/hashlnk.cpp (Rafael Rivera)

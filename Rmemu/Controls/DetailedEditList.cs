@@ -1,5 +1,5 @@
 ﻿using BluePointLilac.Methods;
-using ContextMenuManager.Methods;
+using Rmemu.Methods;
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
@@ -8,7 +8,7 @@ using System.IO;
 using System.Windows.Forms;
 using System.Xml;
 
-namespace ContextMenuManager.Controls
+namespace Rmemu.Controls
 {
     sealed class DetailedEditList : SwitchDicList
     {

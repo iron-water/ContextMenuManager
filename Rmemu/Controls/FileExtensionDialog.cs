@@ -1,10 +1,10 @@
 ﻿using BluePointLilac.Controls;
 using BluePointLilac.Methods;
-using ContextMenuManager.Methods;
+using Rmemu.Methods;
 using System;
 using System.Collections.Generic;
 
-namespace ContextMenuManager.Controls
+namespace Rmemu.Controls
 {
     sealed class FileExtensionDialog : SelectDialog
     {

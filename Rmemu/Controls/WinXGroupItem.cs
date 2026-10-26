@@ -1,9 +1,9 @@
-﻿using ContextMenuManager.Controls.Interfaces;
-using ContextMenuManager.Methods;
+﻿using Rmemu.Controls.Interfaces;
+using Rmemu.Methods;
 using System.IO;
 using System.Windows.Forms;
 
-namespace ContextMenuManager.Controls
+namespace Rmemu.Controls
 {
     sealed class WinXGroupItem : FoldGroupItem, IChkVisibleItem, ITsiDeleteItem, ITsiTextItem
     {

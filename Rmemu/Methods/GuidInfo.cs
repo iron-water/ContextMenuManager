@@ -8,7 +8,7 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 
-namespace ContextMenuManager.Methods
+namespace Rmemu.Methods
 {
     static class GuidInfo
     {

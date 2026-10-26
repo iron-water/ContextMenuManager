@@ -1,4 +1,4 @@
-﻿namespace ContextMenuManager.Controls.Interfaces
+﻿namespace Rmemu.Controls.Interfaces
 {
     interface IProtectOpenItem
     {

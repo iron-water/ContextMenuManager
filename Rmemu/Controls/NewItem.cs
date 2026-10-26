@@ -1,9 +1,9 @@
 ﻿using BluePointLilac.Controls;
 using BluePointLilac.Methods;
-using ContextMenuManager.Methods;
+using Rmemu.Methods;
 using System;
 
-namespace ContextMenuManager.Controls
+namespace Rmemu.Controls
 {
     class NewItem : MyListItem
     {

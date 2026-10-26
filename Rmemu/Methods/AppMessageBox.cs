@@ -1,7 +1,7 @@
 ﻿using BluePointLilac.Methods;
 using System.Windows.Forms;
 
-namespace ContextMenuManager.Methods
+namespace Rmemu.Methods
 {
     public static class AppMessageBox
     {

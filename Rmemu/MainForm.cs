@@ -1,14 +1,14 @@
 ﻿using BluePointLilac.Controls;
 using BluePointLilac.Methods;
-using ContextMenuManager.Controls;
-using ContextMenuManager.Methods;
+using Rmemu.Controls;
+using Rmemu.Methods;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Windows.Forms;
 
-namespace ContextMenuManager
+namespace Rmemu
 {
     sealed class MainForm : MyMainForm
     {
