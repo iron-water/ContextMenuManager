@@ -2,6 +2,7 @@
 using BluePointLilac.Methods;
 using Rmemu.Methods;
 using System;
+using System.Linq;
 using System.IO;
 using System.Windows.Forms;
 
@@ -17,6 +18,7 @@ namespace Rmemu.Controls.Interfaces
     {
         string Text { get; }
         string RegPath { get; }
+        string[] ExtraBackupPaths => Array.Empty<string>();
     }
 
     sealed class DeleteMeMenuItem : ToolStripMenuItem
@@ -29,11 +31,25 @@ namespace Rmemu.Controls.Interfaces
                 {
                     if(AppMessageBox.Show(AppString.Message.DeleteButCanRestore,
                      MessageBoxButtons.YesNo) != DialogResult.Yes) return;
-                    string date = DateTime.Today.ToString("yyyy-MM-dd");
-                    string time = DateTime.Now.ToString("HH.mm.ss");
-                    string filePath = $@"{AppConfig.BackupDir}\{date}\{regItem.Text} - {time}.reg";
-                    Directory.CreateDirectory(Path.GetDirectoryName(filePath));
-                    ExternalProgram.ExportRegistry(regItem.RegPath, filePath);
+                    try
+                    {
+                        string date = DateTime.Today.ToString("yyyy-MM-dd");
+                        string time = DateTime.Now.ToString("HH.mm.ss.fffffff");
+                        string directory = Path.Combine(AppConfig.BackupDir, date);
+                        Directory.CreateDirectory(directory);
+                        string[] paths = new[] { regItem.RegPath }.Concat(regItem.ExtraBackupPaths).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+                        for(int i = 0; i < paths.Length; i++)
+                        {
+                            string suffix = paths.Length == 1 ? "" : " - " + (i + 1).ToString();
+                            string fileName = ObjectPath.RemoveIllegalChars(regItem.Text) + suffix + " - " + time + ".reg";
+                            ExternalProgram.ExportRegistry(paths[i], Path.Combine(directory, fileName));
+                        }
+                    }
+                    catch(Exception ex)
+                    {
+                        AppMessageBox.Show(AppString.W("BackupFailedNotDeleted") + ex.Message);
+                        return;
+                    }
                 }
                 else if(AppMessageBox.Show(AppString.Message.ConfirmDeletePermanently,
                      MessageBoxButtons.YesNo) != DialogResult.Yes) return;
@@ -41,7 +57,6 @@ namespace Rmemu.Controls.Interfaces
                 MyListItem listItem = (MyListItem)item;
                 MyList list = (MyList)listItem.Parent;
                 int index = list.GetItemIndex(listItem);
-                if(index == list.Controls.Count - 1) index--;
                 try
                 {
                     item.DeleteMe();
@@ -52,7 +67,8 @@ namespace Rmemu.Controls.Interfaces
                     return;
                 }
                 list.Controls.Remove(listItem);
-                list.Controls[index].Focus();
+                if(list.Controls.Count != 0) list.Controls[Math.Min(index, list.Controls.Count - 1)].Focus();
+                else (list.Owner ?? (Control)list).Focus();
                 listItem.Dispose();
             };
         }

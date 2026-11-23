@@ -7,6 +7,7 @@ namespace Rmemu.Controls
 {
     sealed class DetailedEditDialog : CommonDialog
     {
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public Guid GroupGuid { get; set; }
 
         public override void Reset() { }

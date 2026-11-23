@@ -1,7 +1,11 @@
 ﻿using BluePointLilac.Controls;
 using BluePointLilac.Methods;
+using Rmemu.Methods;
 using System;
 using System.IO;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml;
 
@@ -9,89 +13,71 @@ namespace Rmemu.Methods
 {
     sealed class Updater
     {
+        private static int updating;
+        internal static string LastError { get; private set; }
+
+        internal static bool IsUpdateDue(DateTime lastCheck, int frequency, DateTime today)
+            => frequency >= 0 && (today.Date - lastCheck.Date).TotalDays >= frequency;
+
         /// <summary>定期检查更新</summary>
         public static void PeriodicUpdate()
         {
             int day = AppConfig.UpdateFrequency;
-            if(day == -1) return;//自动检测更新频率为-1则从不自动检查更新
-            //如果上次检测更新时间加上时间间隔早于或等于今天以前就进行更新操作
-            DateTime time = AppConfig.LastCheckUpdateTime.AddDays(day);
-            //time = DateTime.Today;//测试用
-            if(time <= DateTime.Today) new Action<bool>(Update).BeginInvoke(false, null, null);
+            if(IsUpdateDue(AppConfig.LastCheckUpdateTime, day, DateTime.Today)) Task.Run(() => Update(false));
         }
 
-        /// <summary>更新程序以及程序字典</summary>
+        /// <summary>更新字典；手动操作时查看原项目的上游发布</summary>
         /// <param name="isManual">是否为手动点击更新</param>
         public static void Update(bool isManual)
         {
-            AppConfig.LastCheckUpdateTime = DateTime.Today;
-            UpdateText(isManual);
-            UpdateApp(isManual);
+            if(Interlocked.CompareExchange(ref updating, 1, 0) != 0)
+            {
+                if(isManual) AppMessageBox.Show(AppString.W("UpdateBusy"));
+                return;
+            }
+            try
+            {
+                LastError = null;
+                UpdateText(isManual);
+                AppConfig.LastCheckUpdateTime = DateTime.Today;
+                if(isManual) CheckUpstreamRelease();
+            }
+            catch(Exception ex)
+            {
+                LastError = ex.Message;
+                if(isManual) AppMessageBox.Show(AppString.W("DictUpdateFailed") + ex.Message);
+            }
+            finally { Volatile.Write(ref updating, 0); }
         }
 
-        /// <summary>更新程序</summary>
-        /// <param name="isManual">是否为手动点击更新</param>
-        private static void UpdateApp(bool isManual)
+        /// <summary>只查看原项目发布信息，永不下载或替换此分支的可执行文件。</summary>
+        private static void CheckUpstreamRelease()
         {
-            using(UAWebClient client = new UAWebClient())
+            string releaseUrl = AppConfig.RequestUseGithub ? AppConfig.GithubLatest : AppConfig.GiteeReleases;
+            try
             {
-                string url = AppConfig.RequestUseGithub ? AppConfig.GithubLatestApi : AppConfig.GiteeLatestApi;
-                XmlDocument doc = client.GetWebJsonToXml(url);
-                if(doc == null)
+                using(UAWebClient client = new UAWebClient())
                 {
-                    if(isManual)
-                    {
-                        if(AppMessageBox.Show(AppString.Message.WebDataReadFailed + "\r\n"
-                            + AppString.Message.OpenWebUrl, MessageBoxButtons.OKCancel) != DialogResult.OK) return;
-                        url = AppConfig.RequestUseGithub ? AppConfig.GithubLatest : AppConfig.GiteeReleases;
-                        ExternalProgram.OpenWebUrl(url);
-                    }
-                    return;
+                    string apiUrl = AppConfig.RequestUseGithub ? AppConfig.GithubLatestApi : AppConfig.GiteeLatestApi;
+                    XmlDocument document = client.GetWebJsonToXml(apiUrl);
+                    XmlNode root = document?.DocumentElement;
+                    string version = root?.SelectSingleNode("tag_name")?.InnerText;
+                    if(string.IsNullOrWhiteSpace(version)) throw new InvalidDataException(AppString.W("UpstreamVersionUnreadable"));
+                    string notes = root.SelectSingleNode("body")?.InnerText;
+                    string message = AppString.W("UpstreamLatest", version)
+                        + AppString.W("UpstreamNote");
+                    if(!string.IsNullOrWhiteSpace(notes)) message += "\r\n\r\n" + MachinedInfo(notes);
+                    message += AppString.W("UpstreamOpenPage");
+                    if(AppMessageBox.Show(message, MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
+                        ExternalProgram.OpenWebUrl(releaseUrl);
                 }
-                XmlNode root = doc.FirstChild;
-                XmlNode tagNameXN = root.SelectSingleNode("tag_name");
-                Version webVer = new Version(tagNameXN.InnerText);
-                Version appVer = new Version(Application.ProductVersion);
-#if DEBUG
-            appVer = new Version(0, 0, 0, 0);//测试用
-#endif
-                if(appVer >= webVer)
-                {
-                    if(isManual) AppMessageBox.Show(AppString.Message.VersionIsLatest,
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-                else
-                {
-                    XmlNode bodyXN = root.SelectSingleNode("body");
-                    string info = AppString.Message.UpdateInfo.Replace("%v1", appVer.ToString()).Replace("%v2", webVer.ToString());
-                    info += "\r\n\r\n" + MachinedInfo(bodyXN.InnerText);
-                    if(MessageBox.Show(info, AppString.General.AppName, 
-                        MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
-                    {
-                        string netVer = Environment.Version > new Version(4, 0) ? "4.0" : "3.5";
-                        XmlNode assetsXN = root.SelectSingleNode("assets");
-                        foreach(XmlNode itemXN in assetsXN.SelectNodes("item"))
-                        {
-                            XmlNode nameXN = itemXN.SelectSingleNode("name");
-                            if(nameXN != null && nameXN.InnerText.Contains(netVer))
-                            {
-                                XmlNode urlXN = itemXN.SelectSingleNode("browser_download_url");
-                                using(DownloadDialog dlg = new DownloadDialog())
-                                {
-                                    dlg.Url = urlXN?.InnerText;
-                                    dlg.FilePath = $@"{AppConfig.AppDataDir}\{webVer}.exe";
-                                    dlg.Text = AppString.General.AppName;
-                                    if(dlg.ShowDialog() == DialogResult.OK)
-                                    {
-                                        AppMessageBox.Show(AppString.Message.UpdateSucceeded,
-                                            MessageBoxButtons.OK, MessageBoxIcon.Information);
-                                        SingleInstance.Restart(null, dlg.FilePath);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+            }
+            catch(Exception ex)
+            {
+                string message = AppString.W("UpstreamReadFailed") + ex.Message
+                    + AppString.W("UpstreamOpenPage2");
+                if(AppMessageBox.Show(message, MessageBoxButtons.YesNo) == DialogResult.Yes)
+                    ExternalProgram.OpenWebUrl(releaseUrl);
             }
         }
 
@@ -106,15 +92,25 @@ namespace Rmemu.Methods
                 succeeded = failed = "";
                 foreach(string filePath in filePaths)
                 {
-                    using(UAWebClient client = new UAWebClient())
+                    bool flag;
+                    try
                     {
-                        string fileUrl = $"{dirUrl}/{Path.GetFileName(filePath)}";
-                        var func = new Func<string, string, bool>(client.WebStringToFile);
-                        bool flag = func.EndInvoke(func.BeginInvoke(filePath, fileUrl, null, null));
-                        string item = "\r\n ● " + Path.GetFileName(filePath);
-                        if(flag) succeeded += item;
-                        else failed += item;
+                        using(UAWebClient client = new UAWebClient())
+                        {
+                            string contents = client.GetWebString($"{dirUrl}/{Path.GetFileName(filePath)}");
+                            string expectedRoot = filePath.Equals(AppConfig.WebUwpModeItemsDic, StringComparison.OrdinalIgnoreCase) ? "Scene"
+                                : Path.GetExtension(filePath).Equals(".xml", StringComparison.OrdinalIgnoreCase) ? "Data" : null;
+                            flag = contents != null && UAWebClient.WriteDownloadedText(filePath, contents, expectedRoot);
+                        }
                     }
+                    catch(Exception ex) when(ex is IOException || ex is UnauthorizedAccessException || ex is System.Security.SecurityException)
+                    {
+                        flag = false;
+                        LastError = ex.Message;
+                    }
+                    string item = "\r\n ● " + Path.GetFileName(filePath);
+                    if(flag) succeeded += item;
+                    else failed += item;
                 }
                 dirName = "\r\n\r\n" + dirName + ":";
                 if(succeeded != "") succeeded = dirName + succeeded;
@@ -146,7 +142,7 @@ namespace Rmemu.Methods
         /// <summary>加工处理更新信息，去掉标题头</summary>
         private static string MachinedInfo(string info)
         {
-            string str = string.Empty;
+            StringBuilder result = new StringBuilder();
             string[] lines = info.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
             for(int m = 0; m < lines.Length; m++)
             {
@@ -159,9 +155,9 @@ namespace Rmemu.Methods
                         break;
                     }
                 }
-                str += line + "\r\n";
+                result.AppendLine(line);
             }
-            return str;
+            return result.ToString();
         }
     }
 }

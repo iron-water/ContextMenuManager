@@ -17,9 +17,55 @@ namespace Rmemu.Methods
             return value.Replace("\\r", "\r").Replace("\\n", "\n");
         }
 
+        private const string WorkspaceSection = "Workspace";
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> workspaceCache
+            = new System.Collections.Concurrent.ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        private static IniReader englishReader;
+
+        /// <summary>
+        /// Text for the Fluent workspace UI ([Workspace] section). Order: selected language,
+        /// then English for non-Chinese languages, then the built-in zh-CN dictionary.
+        /// A key missing everywhere returns "[Workspace.Key]" so gaps are visible and testable.
+        /// </summary>
+        public static string W(string key) => workspaceCache.GetOrAdd(key, ReadWorkspace);
+
+        /// <summary>Formatted workspace text; placeholders use {0}, {1}…</summary>
+        public static string W(string key, params object[] args)
+        {
+            string format = W(key);
+            try { return string.Format(System.Globalization.CultureInfo.CurrentCulture, format, args); }
+            catch(FormatException) { return format + " " + string.Join(" ", args); }
+        }
+
+        private static string ReadWorkspace(string key)
+        {
+            string value = UserLangReader.GetValue(WorkspaceSection, key);
+            if(string.IsNullOrEmpty(value) && !IsChineseLanguage())
+            {
+                if(englishReader == null)
+                {
+                    string path = System.IO.Path.Combine(AppConfig.LangsDir, "en-US.ini");
+                    englishReader = System.IO.File.Exists(path) ? new IniReader(path) : new IniReader(new StringBuilder());
+                }
+                value = englishReader.GetValue(WorkspaceSection, key);
+            }
+            if(string.IsNullOrEmpty(value)) value = DefLangReader.GetValue(WorkspaceSection, key);
+            if(string.IsNullOrEmpty(value)) return "[" + WorkspaceSection + "." + key + "]";
+            return value.Replace("\\r", "\r").Replace("\\n", "\n");
+        }
+
+        private static bool IsChineseLanguage()
+        {
+            string name = System.IO.Path.GetFileNameWithoutExtension(AppConfig.LanguageIniPath ?? "");
+            if(string.IsNullOrEmpty(name) || !System.IO.File.Exists(AppConfig.LanguageIniPath ?? ""))
+                name = System.Globalization.CultureInfo.CurrentUICulture.Name;
+            return name.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
+        }
+
         /// <summary>加载语言</summary>
         public static void LoadStrings()
         {
+            workspaceCache.Clear();
             foreach(Type type in typeof(AppString).GetNestedTypes())
             {
                 foreach(PropertyInfo pi in type.GetProperties())

@@ -49,7 +49,7 @@ namespace BluePointLilac.Methods
             Thread.Sleep(100);
             process.WaitForInputIdle();
             SendMessage(hTree, WM_KEYDOWN, VK_RIGHT, null);
-            foreach(char chr in Encoding.Default.GetBytes(regPath))
+            foreach(char chr in regPath)
             {
                 process.WaitForInputIdle();
                 if(chr == '\\')
@@ -73,7 +73,7 @@ namespace BluePointLilac.Methods
             SetFocus(hList);
             process.WaitForInputIdle();
             SendMessage(hList, WM_KEYDOWN, VK_HOME, null);
-            foreach(char chr in Encoding.Default.GetBytes(valueName))
+            foreach(char chr in valueName)
             {
                 process.WaitForInputIdle();
                 SendMessage(hList, WM_CHAR, Convert.ToInt16(chr), null);
@@ -113,6 +113,7 @@ namespace BluePointLilac.Methods
             using(Process process = new Process())
             {
                 process.StartInfo.FileName = dirPath;
+                process.StartInfo.UseShellExecute = true;
                 process.Start();
             }
         }
@@ -180,12 +181,9 @@ namespace BluePointLilac.Methods
         public static void OpenWebUrl(string url)
         {
             if(url == null) return;
-            //替换网址转义符
-            url = url.Replace("%", "%25").Replace("#", "%23").Replace("&", "%26").Replace("+", "%2B");
             using(Process process = new Process())
             {
-                //通过explorer来调用默认浏览器打开链接，避免管理员权限影响
-                process.StartInfo = new ProcessStartInfo($"\"{url}\"");
+                process.StartInfo = new ProcessStartInfo(url) { UseShellExecute = true };
                 process.Start();
             }
         }
@@ -195,12 +193,66 @@ namespace BluePointLilac.Methods
         /// <param name="filePath">.reg文件保存路径</param>
         public static void ExportRegistry(string regPath, string filePath)
         {
-            using(Process process = new Process())
+            if(string.IsNullOrWhiteSpace(regPath)) throw new ArgumentException("Registry path is required.", nameof(regPath));
+            if(string.IsNullOrWhiteSpace(filePath)) throw new ArgumentException("Export file path is required.", nameof(filePath));
+            RegistryEx.GetRootAndSubRegPath(regPath, out RegistryKey root, out string subPath);
+            string canonicalPath = root.Name + (subPath.Length == 0 ? "" : "\\" + subPath.TrimEnd('\\'));
+            string destination = Path.GetFullPath(filePath);
+            string stagedPath = Path.Combine(Path.GetDirectoryName(destination), ".rmemu-export-" + Guid.NewGuid().ToString("N") + ".tmp");
+            try
             {
-                process.StartInfo.FileName = "regedit.exe";
-                process.StartInfo.Arguments = $"/e \"{filePath}\" \"{regPath}\"";
-                process.Start();
-                process.WaitForExit();
+                using(new FileStream(stagedPath, FileMode.CreateNew, FileAccess.Write, FileShare.None)) { }
+                using(Process process = new Process())
+                {
+                    process.StartInfo = new ProcessStartInfo
+                    {
+                        FileName = Path.Combine(Environment.SystemDirectory, "reg.exe"),
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true
+                    };
+                    process.StartInfo.ArgumentList.Add("export");
+                    process.StartInfo.ArgumentList.Add(canonicalPath);
+                    process.StartInfo.ArgumentList.Add(stagedPath);
+                    process.StartInfo.ArgumentList.Add("/y");
+                    process.StartInfo.ArgumentList.Add(Environment.Is64BitProcess ? "/reg:64" : "/reg:32");
+                    process.Start();
+                    var output = process.StandardOutput.ReadToEndAsync();
+                    var error = process.StandardError.ReadToEndAsync();
+                    process.WaitForExit();
+                    string details = error.GetAwaiter().GetResult().Trim();
+                    string result = output.GetAwaiter().GetResult().Trim();
+                    if(process.ExitCode != 0)
+                        throw new IOException($"reg.exe exited with code {process.ExitCode}: {(details.Length == 0 ? result : details)}");
+                }
+                using(StreamReader reader = new StreamReader(stagedPath, Encoding.Unicode, true))
+                {
+                    if(reader.ReadLine() != "Windows Registry Editor Version 5.00")
+                        throw new IOException("The registry export has an invalid or missing header.");
+                    bool containsRoot = false;
+                    string line;
+                    while((line = reader.ReadLine()) != null)
+                    {
+                        if(line.Equals("[" + canonicalPath + "]", StringComparison.OrdinalIgnoreCase))
+                        {
+                            containsRoot = true;
+                            break;
+                        }
+                    }
+                    if(!containsRoot) throw new IOException("The registry export does not contain the requested key.");
+                }
+                File.Move(stagedPath, destination, true);
+            }
+            catch(Exception ex)
+            {
+                throw new IOException($"Could not export registry key '{regPath}' to '{filePath}'. {ex.Message}", ex);
+            }
+            finally
+            {
+                try { File.Delete(stagedPath); }
+                catch(IOException) { }
+                catch(UnauthorizedAccessException) { }
             }
         }
 
@@ -243,7 +295,7 @@ namespace BluePointLilac.Methods
         [DllImport("user32.dll")]
         private static extern IntPtr FindWindowEx(IntPtr hwndParent, IntPtr hwndChild, string lpszClass, string lpszWindow);
 
-        [DllImport("user32.dll")]
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
         private static extern int SendMessage(IntPtr hWnd, int uMsg, int wParam, string lParam);
 
         [DllImport("shell32.dll", ExactSpelling = true)]

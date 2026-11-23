@@ -12,6 +12,7 @@ namespace Rmemu.Controls
             InitializeComponents();
         }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public bool ItemVisible
         {
             get => (File.GetAttributes(GroupPath) & FileAttributes.Hidden) != FileAttributes.Hidden;
@@ -25,6 +26,7 @@ namespace Rmemu.Controls
             }
         }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string ItemText
         {
             get => Path.GetFileNameWithoutExtension(GroupPath);
@@ -37,8 +39,11 @@ namespace Rmemu.Controls
             }
         }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public VisibleCheckBox ChkVisible { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public DeleteMeMenuItem TsiDeleteMe { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public ChangeTextMenuItem TsiChangeText { get; set; }
         readonly ToolStripMenuItem TsiRestoreDefault = new ToolStripMenuItem(AppString.Menu.RestoreDefault);
 

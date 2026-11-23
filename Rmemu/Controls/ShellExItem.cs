@@ -51,6 +51,7 @@ namespace Rmemu.Controls
         }
 
         private string regPath;
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string RegPath
         {
             get => regPath;
@@ -62,27 +63,20 @@ namespace Rmemu.Controls
             }
         }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public Guid Guid { get; set; }
         public string ValueName => null;
         public string SearchText => Text;
         public string ItemFilePath => GuidInfo.GetFilePath(Guid);
         private string KeyName => RegistryEx.GetKeyName(RegPath);
         private string ParentPath => RegistryEx.GetParentPath(RegPath);
-        private string ShellExPath => RegistryEx.GetParentPath(ParentPath);
         private string ParentKeyName => RegistryEx.GetKeyName(ParentPath);
         private string DefaultValue => Registry.GetValue(RegPath, "", null)?.ToString();
         public string ItemText => GuidInfo.GetText(Guid) ?? (KeyName.Equals(Guid.ToString("B"), StringComparison.OrdinalIgnoreCase) ? DefaultValue : KeyName);
         public bool IsDragDropItem => ParentKeyName.EndsWith(DdhParts[0], StringComparison.OrdinalIgnoreCase);
 
-        private string BackupPath
-        {
-            get
-            {
-                string[] parts = IsDragDropItem ? DdhParts : CmhParts;
-                return $@"{ShellExPath}\{(ItemVisible ? parts[1] : parts[0])}\{KeyName}";
-            }
-        }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public bool ItemVisible
         {
             get
@@ -92,28 +86,30 @@ namespace Rmemu.Controls
             }
             set
             {
-                try
-                {
-                    RegistryEx.MoveTo(RegPath, BackupPath);
-                }
-                catch
-                {
-                    AppMessageBox.Show(AppString.Message.AuthorityProtection);
-                    return;
-                }
-                RegPath = BackupPath;
+                if(!ChangeHistory.TryChangeVisibility(this, value, out _, out string error))
+                    throw new System.IO.IOException(error);
             }
         }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public MenuButton BtnShowMenu { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public VisibleCheckBox ChkVisible { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public DetailedEditButton BtnDetailedEdit { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public WebSearchMenuItem TsiSearch { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public FilePropertiesMenuItem TsiFileProperties { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public FileLocationMenuItem TsiFileLocation { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public RegLocationMenuItem TsiRegLocation { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public DeleteMeMenuItem TsiDeleteMe { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public RegExportMenuItem TsiRegExport { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public HandleGuidMenuItem TsiHandleGuid { get; set; }
 
         readonly ToolStripMenuItem TsiDetails = new ToolStripMenuItem(AppString.Menu.Details);
@@ -150,7 +146,6 @@ namespace Rmemu.Controls
         public void DeleteMe()
         {
             RegistryEx.DeleteKeyTree(this.RegPath, true);
-            RegistryEx.DeleteKeyTree(this.BackupPath);
         }
     }
 }

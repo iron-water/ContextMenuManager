@@ -16,12 +16,12 @@ namespace Rmemu.Controls.Interfaces
         {
             item.ContextMenuStrip = new ContextMenuStrip();
             ((MyListItem)item).AddCtr(this);
-            bool isShow = false;
-            this.MouseDown += (sender, e) =>
+            AccessibleName = AppString.W("MoreActions");
+            AccessibleDescription = AppString.W("OpenItemMenu");
+            this.Click += (sender, e) =>
             {
-                if(!isShow) item.ContextMenuStrip.Show(this, 0, Height);
-                else item.ContextMenuStrip.Close();
-                isShow = !isShow;
+                if(item.ContextMenuStrip.Visible) item.ContextMenuStrip.Close();
+                else item.ContextMenuStrip.Show(this, 0, Height);
             };
         }
     }

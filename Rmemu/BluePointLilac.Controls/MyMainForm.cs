@@ -9,6 +9,8 @@ namespace BluePointLilac.Controls
     {
         public MyMainForm()
         {
+            // Geometry already uses DpiZoom; font-driven autoscaling would apply it twice.
+            this.AutoScaleMode = AutoScaleMode.None;
             this.SuspendLayout();
             this.Text = Application.ProductName;
             this.ForeColor = Color.FromArgb(80, 80, 80);
@@ -31,14 +33,17 @@ namespace BluePointLilac.Controls
         public readonly MyListBox MainBody = new MyListBox();
 
         /// <summary>窗体移动时是否临时挂起MainBody</summary>
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public bool SuspendMainBodyWhenMove { get; set; } = false;
         /// <summary>窗体调整大小时是否临时挂起MainBody</summary>
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public bool SuspendMainBodyWhenResize { get; set; } = true;
 
         protected override void OnResize(EventArgs e)
         {
             base.OnResize(e);
-            MainBody.Width = this.ClientSize.Width - SideBar.Width;
+            if(MainBody.Dock == DockStyle.Left)
+                MainBody.Width = this.ClientSize.Width - SideBar.Width;
         }
 
         protected override void WndProc(ref Message m)
@@ -78,7 +83,7 @@ namespace BluePointLilac.Controls
                     }
                     break;
             }
-            if(suspend)
+            if(suspend && MainBody.Parent == this)
             {
                 this.SuspendLayout();
                 MainBody.SuspendLayout();

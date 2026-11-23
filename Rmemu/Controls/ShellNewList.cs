@@ -232,12 +232,17 @@ namespace Rmemu.Controls
                     { TsiSearch, new ToolStripSeparator(), TsiRegLocation });
             }
 
+            [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
             public MenuButton BtnShowMenu { get; set; }
+            [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
             public WebSearchMenuItem TsiSearch { get; set; }
+            [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
             public RegLocationMenuItem TsiRegLocation { get; set; }
+            [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
             public VisibleCheckBox ChkVisible { get; set; }
             public ShellNewList Owner { get; private set; }
 
+            [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
             public bool ItemVisible
             {
                 get => IsLocked;

@@ -11,8 +11,11 @@ namespace Rmemu.Controls
     sealed class ShellStoreDialog : CommonDialog
     {
         public string[] SelectedKeyNames { get; private set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public Func<string, bool> Filter { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string ShellPath { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public bool IsReference { get; set; }
 
         public override void Reset() { }
@@ -162,10 +165,11 @@ namespace Rmemu.Controls
                 this.MouseClick += (sender, e) => chkSelected.Checked = !chkSelected.Checked;
                 chkSelected.CheckedChanged += (sender, e) => SelectedChanged?.Invoke();
             }
-            RegTrustedInstaller.TakeRegTreeOwnerShip(regPath);
         }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public bool IsPublic { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public bool IsSelected
         {
             get => chkSelected.Checked;

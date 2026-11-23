@@ -9,7 +9,9 @@ namespace Rmemu.Controls
 {
     sealed class ShellExecuteDialog : CommonDialog
     {
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string Verb { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public int WindowStyle { get; set; }
         public override void Reset() { }
 
@@ -28,16 +30,18 @@ namespace Rmemu.Controls
             }
         }
 
+        private static string QuoteVB(string value) => (value ?? "").Replace("\"", "\"\"");
+
         public static string GetCommand(string fileName, string arguments, string verb, int windowStyle, string directory = null)
         {
-            arguments = arguments.Replace("\"", "\"\"");
+            arguments = arguments ?? "";
             if(directory == null)
             {
                 ObjectPath.GetFullFilePath(fileName, out string filePath);
                 directory = Path.GetDirectoryName(filePath);
             }
             return "mshta vbscript:createobject(\"shell.application\").shellexecute" +
-                $"(\"{fileName}\",\"{arguments}\",\"{directory}\",\"{verb}\",{windowStyle})(close)";
+                $"(\"{QuoteVB(fileName)}\",\"{QuoteVB(arguments)}\",\"{QuoteVB(directory)}\",\"{QuoteVB(verb)}\",{windowStyle})(close)";
         }
 
         sealed class ShellExecuteForm : Form
@@ -59,7 +63,9 @@ namespace Rmemu.Controls
                 this.InitializeComponents();
                 this.ResumeLayout();
             }
+            [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
             public string Verb { get; set; }
+            [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
             public int WindowStyle { get; set; }
 
             readonly RadioButton[] rdoVerbs = new RadioButton[6];
@@ -141,7 +147,9 @@ namespace Rmemu.Controls
             //this.Font = new Font(this.Font.FontFamily, this.Font.Size - 1F);
         }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string Verb { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public int WindowStyle { get; set; }
 
         readonly ToolTip ttpInfo = new ToolTip { InitialDelay = 1 };

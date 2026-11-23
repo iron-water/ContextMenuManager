@@ -12,7 +12,9 @@ namespace BluePointLilac.Controls
 
         private const int MAXLENGTH = 260;
         private int iconIndex;
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public int IconIndex { get => iconIndex; set => iconIndex = value; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string IconPath { get; set; }
 
         public override void Reset() { }

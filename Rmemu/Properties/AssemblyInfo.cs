@@ -1,6 +1,8 @@
 ﻿using System.Reflection;
 using System.Runtime.InteropServices;
 
+[assembly: System.Runtime.Versioning.SupportedOSPlatform("windows7.0")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Rmemu.Regression")]
 [assembly: AssemblyTitle("Rmemu - Windows右键管理")]
 [assembly: AssemblyDescription("Rmemu - Windows右键管理")]
 [assembly: AssemblyConfiguration("")]

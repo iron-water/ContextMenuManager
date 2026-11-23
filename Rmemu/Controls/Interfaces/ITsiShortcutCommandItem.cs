@@ -40,7 +40,9 @@ namespace Rmemu.Controls.Interfaces
 
         sealed class CommandDialog : CommonDialog
         {
+            [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
             public string Command { get; set; }
+            [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
             public string Arguments { get; set; }
 
             public override void Reset() { }
@@ -77,12 +79,14 @@ namespace Rmemu.Controls.Interfaces
                     InitializeComponents();
                 }
 
+                [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
                 public string Command
                 {
                     get => txtCommand.Text;
                     set => txtCommand.Text = value;
                 }
 
+                [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
                 public string Arguments
                 {
                     get => txtArguments.Text;

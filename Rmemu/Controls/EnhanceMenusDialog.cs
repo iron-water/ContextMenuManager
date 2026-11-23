@@ -7,6 +7,7 @@ namespace Rmemu.Controls
 {
     sealed class EnhanceMenusDialog : CommonDialog
     {
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string ScenePath { get; set; }
 
         public override void Reset() { }

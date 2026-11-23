@@ -121,6 +121,7 @@ namespace Rmemu.Controls
 
         sealed class DonateListDialog : CommonDialog
         {
+            [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
             public string DanateData { get; set; }
 
             public override void Reset() { }
@@ -131,7 +132,7 @@ namespace Rmemu.Controls
                 {
                     frm.ShowDonateList(DanateData);
                     MainForm mainForm = (MainForm)FromHandle(hwndOwner);
-                    frm.Left = mainForm.Left + (mainForm.Width + mainForm.SideBar.Width - frm.Width) / 2;
+                    frm.Left = mainForm.Left + (mainForm.Width - frm.Width) / 2;
                     frm.Top = mainForm.Top + 150.DpiZoom();
                     frm.TopMost = AppConfig.TopMost;
                     frm.ShowDialog();
@@ -143,7 +144,7 @@ namespace Rmemu.Controls
             {
                 public DonateListForm()
                 {
-                    this.Font = SystemFonts.DialogFont;
+                    this.Font = FluentTheme.BodyFont;
                     this.Text = AppString.Other.DonationList;
                     this.SizeGripStyle = SizeGripStyle.Hide;
                     this.StartPosition = FormStartPosition.Manual;
@@ -154,10 +155,27 @@ namespace Rmemu.Controls
                     dgvDonate.ColumnHeadersDefaultCellStyle.Alignment
                         = dgvDonate.RowsDefaultCellStyle.Alignment
                         = DataGridViewContentAlignment.BottomCenter;
-                    this.Controls.AddRange(new Control[] { lblThank, lblDonate, dgvDonate });
-                    lblThank.MouseEnter += (sender, e) => lblThank.ForeColor = Color.FromArgb(0, 162, 255);
-                    lblThank.MouseLeave += (sender, e) => lblThank.ForeColor = Color.DimGray;
-                    lblDonate.Resize += (sender, e) => this.OnResize(null);
+                    var layout = new TableLayoutPanel
+                    {
+                        Dock = DockStyle.Fill,
+                        ColumnCount = 1,
+                        RowCount = 3,
+                        Padding = new Padding(20.DpiZoom())
+                    };
+                    layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+                    layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+                    layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+                    layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+                    lblDonate.Dock = DockStyle.Fill;
+                    lblDonate.Margin = Padding.Empty;
+                    lblThank.Anchor = AnchorStyles.Right;
+                    lblThank.Margin = new Padding(0, 8.DpiZoom(), 0, 12.DpiZoom());
+                    dgvDonate.Dock = DockStyle.Fill;
+                    dgvDonate.Margin = Padding.Empty;
+                    layout.Controls.Add(lblDonate, 0, 0);
+                    layout.Controls.Add(lblThank, 0, 1);
+                    layout.Controls.Add(dgvDonate, 0, 2);
+                    this.Controls.Add(layout);
                     this.AddEscapeButton();
                 }
 
@@ -178,22 +196,11 @@ namespace Rmemu.Controls
                 readonly Label lblDonate = new Label { AutoSize = true };
                 readonly Label lblThank = new Label
                 {
-                    Font = new Font("Lucida Handwriting", 15F),
-                    ForeColor = Color.DimGray,
+                    ForeColor = FluentTheme.Muted,
                     Text = "Thank you!",
                     AutoSize = true,
                 };
 
-                protected override void OnResize(EventArgs e)
-                {
-                    base.OnResize(e);
-                    int a = 20.DpiZoom();
-                    lblDonate.Location = new Point(a, a);
-                    dgvDonate.Location = new Point(a, lblDonate.Bottom + a);
-                    dgvDonate.Width = this.ClientSize.Width - 2 * a;
-                    dgvDonate.Height = this.ClientSize.Height - 3 * a - lblDonate.Height;
-                    lblThank.Location = new Point(dgvDonate.Right - lblThank.Width, lblDonate.Bottom - lblThank.Height);
-                }
 
                 public void ShowDonateList(string contents)
                 {

@@ -5,6 +5,10 @@ VisualStudioVersion = 16.0.31005.135
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rmemu", "Rmemu\Rmemu.csproj", "{EF7E60E9-3565-42BA-AFB3-7FE73A1B011C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rmemu.Regression", "tests\Rmemu.Regression\Rmemu.Regression.csproj", "{426657F8-07C7-46D7-8F9D-41D6B1826781}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rmemu.DesktopChecks", "tests\Rmemu.DesktopChecks\Rmemu.DesktopChecks.csproj", "{890CB454-3F59-4133-98FA-A9FD4DBA3B12}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +19,14 @@ Global
 		{EF7E60E9-3565-42BA-AFB3-7FE73A1B011C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EF7E60E9-3565-42BA-AFB3-7FE73A1B011C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EF7E60E9-3565-42BA-AFB3-7FE73A1B011C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{426657F8-07C7-46D7-8F9D-41D6B1826781}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{426657F8-07C7-46D7-8F9D-41D6B1826781}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{426657F8-07C7-46D7-8F9D-41D6B1826781}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{426657F8-07C7-46D7-8F9D-41D6B1826781}.Release|Any CPU.Build.0 = Release|Any CPU
+		{890CB454-3F59-4133-98FA-A9FD4DBA3B12}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{890CB454-3F59-4133-98FA-A9FD4DBA3B12}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{890CB454-3F59-4133-98FA-A9FD4DBA3B12}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{890CB454-3F59-4133-98FA-A9FD4DBA3B12}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

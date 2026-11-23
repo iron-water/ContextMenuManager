@@ -8,6 +8,7 @@ namespace Rmemu.Controls
 {
     sealed class EnhanceMenusList : SwitchDicList
     {
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string ScenePath { get; set; }
 
         public override void LoadItems()

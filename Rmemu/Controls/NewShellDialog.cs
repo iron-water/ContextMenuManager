@@ -8,7 +8,9 @@ namespace Rmemu.Controls
 {
     sealed class NewShellDialog : CommonDialog
     {
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string ShellPath { get; set; }//传入的Shell注册表路径
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string ScenePath { get; set; }//菜单项所处环境注册表路径
         public string NewItemRegPath { get; private set; }//返回的新ShellItem的注册表路径
         public string NewItemKeyName => RegistryEx.GetKeyName(NewItemRegPath);
@@ -32,8 +34,10 @@ namespace Rmemu.Controls
 
         sealed class NewShellForm : NewItemForm
         {
+            [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
             public string ShellPath { get; set; }
             public string NewItemRegPath { get; private set; }//返回的新建菜单项注册表路径
+            [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
             public string ScenePath { get; set; }//菜单所处环境路径，用于判断添加后缀
 
             readonly RadioButton rdoSingle = new RadioButton

@@ -6,10 +6,17 @@ namespace BluePointLilac.Controls
     /// <summary>限制水平、竖直方向调整大小的窗体</summary>
     public class ResizeLimitedForm : Form
     {
+        protected override void OnLoad(EventArgs e)
+        {
+            FluentTheme.Apply(this);
+            base.OnLoad(e);
+        }
         /// <summary>水平方向可调整大小</summary>
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public bool HorizontalResizable { get; set; } = true;
 
         /// <summary>竖直方向可调整大小</summary>
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public bool VerticalResizable { get; set; } = true;
 
         protected override void WndProc(ref Message m)

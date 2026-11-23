@@ -170,6 +170,7 @@ namespace Rmemu.Controls
         private static string GetOpenModePath(string extension) => extension != null ? $@"{RegistryEx.CLASSES_ROOT}\{GetOpenMode(extension)}" : null;
         private static string GetPerceivedType(string extension) => Registry.GetValue($@"{RegistryEx.CLASSES_ROOT}\{extension}", "PerceivedType", null)?.ToString();
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public Scenes Scene { get; set; }
 
         public void LoadItems()
@@ -283,7 +284,6 @@ namespace Rmemu.Controls
         private void LoadItems(string scenePath)
         {
             if(scenePath == null) return;
-            RegTrustedInstaller.TakeRegKeyOwnerShip(scenePath);
             this.LoadShellItems(GetShellPath(scenePath));
             this.LoadShellExItems(GetShellExPath(scenePath));
         }
@@ -293,7 +293,6 @@ namespace Rmemu.Controls
             using(RegistryKey shellKey = RegistryEx.GetRegistryKey(shellPath))
             {
                 if(shellKey == null) return;
-                RegTrustedInstaller.TakeRegTreeOwnerShip(shellKey.Name);
                 foreach(string keyName in shellKey.GetSubKeyNames())
                 {
                     this.AddItem(new ShellItem($@"{shellPath}\{keyName}"));
@@ -308,7 +307,6 @@ namespace Rmemu.Controls
             {
                 if(shellExKey == null) return;
                 bool isDragDrop = Scene == Scenes.DragDrop;
-                RegTrustedInstaller.TakeRegTreeOwnerShip(shellExKey.Name);
                 Dictionary<string, Guid> dic = ShellExItem.GetPathAndGuids(shellExPath, isDragDrop);
                 FoldGroupItem groupItem = null;
                 if(isDragDrop)
@@ -427,23 +425,35 @@ namespace Rmemu.Controls
 
             btnEnhanceMenu.MouseDown += (sender, e) =>
             {
-                string tempPath1 = Path.GetTempFileName();
-                string tempPath2 = Path.GetTempFileName();
-                ExternalProgram.ExportRegistry(scenePath, tempPath1);
-                using(EnhanceMenusDialog dlg = new EnhanceMenusDialog())
+                string tempPath1 = null;
+                string tempPath2 = null;
+                try
                 {
-                    dlg.ScenePath = scenePath;
-                    dlg.ShowDialog();
+                    tempPath1 = Path.GetTempFileName();
+                    tempPath2 = Path.GetTempFileName();
+                    ExternalProgram.ExportRegistry(scenePath, tempPath1);
+                    using(EnhanceMenusDialog dlg = new EnhanceMenusDialog())
+                    {
+                        dlg.ScenePath = scenePath;
+                        dlg.ShowDialog();
+                    }
+                    ExternalProgram.ExportRegistry(scenePath, tempPath2);
+                    string str1 = File.ReadAllText(tempPath1);
+                    string str2 = File.ReadAllText(tempPath2);
+                    if(!str1.Equals(str2))
+                    {
+                        MainForm mainForm = (MainForm)this.FindForm();
+                        mainForm.JumpItem(mainForm.SelectedCategory, mainForm.SelectedLocation);
+                    }
                 }
-                ExternalProgram.ExportRegistry(scenePath, tempPath2);
-                string str1 = File.ReadAllText(tempPath1);
-                string str2 = File.ReadAllText(tempPath2);
-                File.Delete(tempPath1);
-                File.Delete(tempPath2);
-                if(!str1.Equals(str2))
+                catch(Exception ex)
                 {
-                    MainForm mainForm = (MainForm)this.FindForm();
-                    mainForm.JumpItem(mainForm.ToolBar.SelectedIndex, mainForm.SideBar.SelectedIndex);
+                    AppMessageBox.Show(AppString.W("ExportFailed") + ex.Message);
+                }
+                finally
+                {
+                    if(tempPath1 != null) File.Delete(tempPath1);
+                    if(tempPath2 != null) File.Delete(tempPath2);
                 }
             };
         }
@@ -657,6 +667,7 @@ namespace Rmemu.Controls
             readonly PictureButton BtnSelect = new PictureButton(AppImage.Select);
 
             public Scenes Scene { get; private set; }
+            [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
             public string SelectedPath { get; set; }
 
             private void SetTextAndTip()

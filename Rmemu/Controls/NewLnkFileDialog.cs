@@ -8,9 +8,13 @@ namespace Rmemu.Controls
 {
     sealed class NewLnkFileDialog : CommonDialog
     {
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string ItemText { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string ItemFilePath { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string Arguments { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string FileFilter { get; set; }
         public override void Reset() { }
 
@@ -33,6 +37,7 @@ namespace Rmemu.Controls
 
         sealed class NewLnkForm : NewItemForm
         {
+            [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
             public string FileFilter { get; set; }
 
             readonly RadioButton rdoFile = new RadioButton

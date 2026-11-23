@@ -1,4 +1,4 @@
-﻿using BluePointLilac.Methods;
+using BluePointLilac.Methods;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -10,137 +10,142 @@ namespace BluePointLilac.Controls
     {
         public MyListBox()
         {
-            this.AutoScroll = true;
-            this.BackColor = Color.FromArgb(250, 250, 250);
+            AutoScroll = true;
+            BackColor = FluentTheme.Background;
+            Font = FluentTheme.BodyFont;
+            DoubleBuffered = true;
         }
-
         protected override void OnMouseWheel(MouseEventArgs e)
         {
-            //使滚动幅度与MyListItem的高度相配合，防止滚动过快导致来不及重绘界面变花
             base.OnMouseWheel(new MouseEventArgs(e.Button, e.Clicks, e.X, e.Y, Math.Sign(e.Delta) * 50.DpiZoom()));
         }
     }
 
     public class MyList : FlowLayoutPanel
     {
+        private MyListBox resizeOwner;
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public MyListBox Owner
         {
-            get => (MyListBox)this.Parent;
-            set => this.Parent = value;
+            get => Parent as MyListBox;
+            set => Parent = value;
         }
-
-        public MyList(MyListBox owner) : this()
-        {
-            this.Owner = owner;
-        }
-
+        public MyList(MyListBox owner) : this() { Owner = owner; }
         public MyList()
         {
-            this.AutoSize = true;
-            this.WrapContents = true;
-            this.Dock = DockStyle.Top;
-            this.DoubleBuffered = true;
-            this.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            AutoSize = true;
+            WrapContents = false;
+            FlowDirection = FlowDirection.TopDown;
+            Dock = DockStyle.Top;
+            DoubleBuffered = true;
+            AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            BackColor = FluentTheme.Background;
+            Font = FluentTheme.BodyFont;
+        }
+
+        protected override void OnParentChanged(EventArgs e)
+        {
+            if(resizeOwner != null) resizeOwner.Resize -= OnOwnerResize;
+            base.OnParentChanged(e);
+            resizeOwner = Owner;
+            if(resizeOwner != null) resizeOwner.Resize += OnOwnerResize;
+            ResizeItems();
+        }
+        protected override void Dispose(bool disposing)
+        {
+            if(disposing && resizeOwner != null)
+            {
+                resizeOwner.Resize -= OnOwnerResize;
+                resizeOwner = null;
+            }
+            base.Dispose(disposing);
+        }
+        private void OnOwnerResize(object sender, EventArgs e) => ResizeItems();
+        private void ResizeItems()
+        {
+            if(Owner == null) return;
+            foreach(Control item in Controls)
+                item.Width = Math.Max(0, Owner.ClientSize.Width - Owner.Padding.Horizontal - Padding.Horizontal - item.Margin.Horizontal);
+        }
+        protected override void OnControlAdded(ControlEventArgs e)
+        {
+            base.OnControlAdded(e);
+            if(e.Control is MyListItem item) item.MouseEnter += OnItemMouseEnter;
+            ResizeItems();
+        }
+        protected override void OnControlRemoved(ControlEventArgs e)
+        {
+            if(e.Control is MyListItem item) item.MouseEnter -= OnItemMouseEnter;
+            if(hoveredItem == e.Control) HoveredItem = null;
+            base.OnControlRemoved(e);
+        }
+        private void OnItemMouseEnter(object sender, EventArgs e) => HoveredItem = sender as MyListItem;
+        protected override void OnMouseWheel(MouseEventArgs e)
+        {
+            foreach(Control item in Controls) item.ContextMenuStrip?.Close();
+            base.OnMouseWheel(e);
         }
 
         private MyListItem hoveredItem;
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public MyListItem HoveredItem
         {
             get => hoveredItem;
             set
             {
                 if(hoveredItem == value) return;
-                if(hoveredItem != null)
-                {
-                    hoveredItem.ForeColor = Color.FromArgb(90, 90, 90);
-                    //hoveredItem.BackColor = Color.FromArgb(250, 250, 250);
-                    //hoveredItem.Font = new Font(hoveredItem.Font, FontStyle.Regular);
-                }
+                MyListItem previous = hoveredItem;
                 hoveredItem = value;
-                if(hoveredItem != null)
-                {
-                    value.ForeColor = Color.FromArgb(0, 138, 217);
-                    //value.BackColor = Color.FromArgb(200, 230, 250);
-                    //value.Font = new Font(hoveredItem.Font, FontStyle.Bold);
-                    value.Focus();
-                }
-                HoveredItemChanged?.Invoke(this, null);
+                previous?.ApplyTheme();
+                hoveredItem?.ApplyTheme();
+                HoveredItemChanged?.Invoke(this, EventArgs.Empty);
             }
         }
-
         public event EventHandler HoveredItemChanged;
 
         public void AddItem(MyListItem item)
         {
-            this.SuspendLayout();
-            item.Parent = this;
-            item.MouseEnter += (sender, e) => HoveredItem = item;
-            this.MouseWheel += (sender, e) => item.ContextMenuStrip?.Close();
-            void ResizeItem() => item.Width = Owner.Width - item.Margin.Horizontal;
-            Owner.Resize += (sender, e) => ResizeItem();
-            ResizeItem();
-            this.ResumeLayout();
+            if(item == null) return;
+            Controls.Add(item);
         }
-
-        public void AddItems(MyListItem[] items)
-        {
-            Array.ForEach(items, item => AddItem(item));
-        }
-
-        public void AddItems(List<MyListItem> items)
-        {
-            items.ForEach(item => AddItem(item));
-        }
-
-        public void SetItemIndex(MyListItem item, int newIndex)
-        {
-            this.Controls.SetChildIndex(item, newIndex);
-        }
-
-        public int GetItemIndex(MyListItem item)
-        {
-            return Controls.GetChildIndex(item);
-        }
-
+        public void AddItems(MyListItem[] items) => Array.ForEach(items, AddItem);
+        public void AddItems(List<MyListItem> items) => items.ForEach(AddItem);
+        public void SetItemIndex(MyListItem item, int newIndex) => Controls.SetChildIndex(item, newIndex);
+        public int GetItemIndex(MyListItem item) => Controls.GetChildIndex(item);
         public void InsertItem(MyListItem item, int index)
         {
             if(item == null) return;
-            this.AddItem(item);
-            this.SetItemIndex(item, index);
+            AddItem(item);
+            SetItemIndex(item, index);
         }
-
         public virtual void ClearItems()
         {
-            if(this.Controls.Count == 0) return;
-            this.SuspendLayout();
-            for(int i = this.Controls.Count - 1; i >= 0; i--)
+            SuspendLayout();
+            try
             {
-                Control ctr = this.Controls[i];
-                this.Controls.Remove(ctr);
-                ctr.Dispose();
+                HoveredItem = null;
+                while(Controls.Count > 0)
+                {
+                    Control item = Controls[Controls.Count - 1];
+                    Controls.Remove(item);
+                    item.Dispose();
+                }
             }
-            this.ResumeLayout();
+            finally { ResumeLayout(); }
         }
-
         public void SortItemByText()
         {
             List<MyListItem> items = new List<MyListItem>();
-            foreach(MyListItem item in this.Controls) items.Add(item);
-            this.Controls.Clear();
+            foreach(MyListItem item in Controls) items.Add(item);
             items.Sort(new TextComparer());
-            items.ForEach(item => this.AddItem(item));
+            SuspendLayout();
+            for(int i = 0; i < items.Count; i++) Controls.SetChildIndex(items[i], i);
+            ResumeLayout();
         }
-
         public class TextComparer : IComparer<MyListItem>
         {
             public int Compare(MyListItem x, MyListItem y)
-            {
-                if(x.Equals(y)) return 0;
-                string[] strs = { x.Text, y.Text };
-                Array.Sort(strs);
-                if(strs[0] == x.Text) return -1;
-                else return 1;
-            }
+                => StringComparer.CurrentCultureIgnoreCase.Compare(x?.Text, y?.Text);
         }
     }
 
@@ -148,149 +153,255 @@ namespace BluePointLilac.Controls
     {
         public MyListItem()
         {
-            this.SuspendLayout();
-            this.HasImage = true;
-            this.DoubleBuffered = true;
-            this.Height = 50.DpiZoom();
-            this.Margin = new Padding(0);
-            this.Font = SystemFonts.IconTitleFont;
-            this.ForeColor = Color.FromArgb(80, 80, 80);
-            this.BackColor = Color.FromArgb(250, 250, 250);
-            this.Controls.AddRange(new Control[] { lblSeparator, flpControls, lblText, picImage });
-            this.Resize += (Sender, e) => pnlScrollbar.Height = this.ClientSize.Height;
-            flpControls.MouseClick += (sender, e) => this.OnMouseClick(e);
-            flpControls.MouseEnter += (sender, e) => this.OnMouseEnter(e);
-            flpControls.MouseDown += (sender, e) => this.OnMouseDown(e);
+            SuspendLayout();
+            Font = FluentTheme.BodyFont;
+            SetStyle(ControlStyles.Selectable, true);
+            TabStop = true;
+            HasImage = true;
+            DoubleBuffered = true;
+            Height = 52.DpiZoom();
+            Margin = new Padding(0, 0, 0, 1).DpiZoom();
+            ForeColor = FluentTheme.Foreground;
+            BackColor = FluentTheme.Surface;
+            Controls.AddRange(new Control[] { lblSeparator, flpControls, lblText, picImage });
+            flpControls.MouseClick += (sender, e) => OnMouseClick(e);
+            flpControls.MouseEnter += (sender, e) => OnMouseEnter(e);
+            flpControls.MouseLeave += (sender, e) => OnMouseLeave(e);
+            flpControls.MouseDown += (sender, e) => OnMouseDown(e);
+            flpControls.ControlAdded += (sender, e) => PerformLayout();
+            flpControls.ControlRemoved += (sender, e) => PerformLayout();
             lblSeparator.SetEnabled(false);
-            lblText.SetEnabled(false);
-            CenterControl(lblText);
-            CenterControl(picImage);
+            lblText.MouseDown += (sender, e) => OnMouseDown(e);
+            lblText.MouseClick += (sender, e) => OnMouseClick(e);
+            lblText.DoubleClick += (sender, e) => OnDoubleClick(e);
+            lblText.MouseEnter += (sender, e) => OnMouseEnter(e);
+            lblText.MouseLeave += (sender, e) => OnMouseLeave(e);
             AddCtr(pnlScrollbar, 0);
-            this.ResumeLayout();
+            ResumeLayout();
         }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public Image Image
         {
             get => picImage.Image;
-            set => picImage.Image = value;
+            set { picImage.Image = value; PerformLayout(); }
         }
-        public new string Text
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+        public override string Text
         {
-            get => lblText.Text;
-            set => lblText.Text = value;
+            get => base.Text;
+            set
+            {
+                if(lblText != null) lblText.Text = value;
+                AccessibleName = value;
+                base.Text = value;
+                PerformLayout();
+            }
         }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public new Font Font
         {
             get => lblText.Font;
-            set => lblText.Font = value;
+            set { base.Font = value; lblText.Font = value; PerformLayout(); }
         }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public new Color ForeColor
         {
             get => lblText.ForeColor;
-            set => lblText.ForeColor = value;
+            set { base.ForeColor = value; lblText.ForeColor = value; }
         }
-
         private bool hasImage;
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public bool HasImage
         {
             get => hasImage;
-            set
-            {
-                hasImage = value;
-                picImage.Visible = value;
-                lblText.Left = (value ? 60 : 20).DpiZoom();
-            }
+            set { hasImage = value; picImage.Visible = value; PerformLayout(); }
         }
-
+        private bool wrapText;
+        private bool arranging;
+        private bool actionsStacked;
+        private int unstackedHeight;
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+        public bool WrapText
+        {
+            get => wrapText;
+            set { wrapText = value; lblText.AutoEllipsis = !value; PerformLayout(); }
+        }
         private readonly Label lblText = new Label
         {
-            AutoSize = true,
+            AutoEllipsis = true,
+            UseMnemonic = false,
+            TextAlign = ContentAlignment.MiddleLeft,
             Name = "Text"
         };
         private readonly PictureBox picImage = new PictureBox
         {
-            SizeMode = PictureBoxSizeMode.AutoSize,
-            Left = 20.DpiZoom(),
+            SizeMode = PictureBoxSizeMode.Zoom,
+            Size = new Size(24, 24).DpiZoom(),
             Enabled = false,
             Name = "Image"
         };
         private readonly FlowLayoutPanel flpControls = new FlowLayoutPanel
         {
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             FlowDirection = FlowDirection.RightToLeft,
-            Anchor = AnchorStyles.Right,
-            AutoSize = true,
-            Name = "Controls"
+            WrapContents = false,
+            Name = "Controls",
+            TabStop = false
         };
         private readonly Label lblSeparator = new Label
         {
-            BackColor = Color.FromArgb(220, 220, 220),
+            BackColor = FluentTheme.Border,
             Dock = DockStyle.Bottom,
             Name = "Separator",
-            Height = 1
-        };//分割线
+            Height = 1,
+            Visible = false
+        };
         private readonly Panel pnlScrollbar = new Panel
         {
-            Width = SystemInformation.VerticalScrollBarWidth,
+            Width = 8.DpiZoom(),
+            Height = 1,
             Enabled = false
-        };//预留滚动条宽度
+        };
 
+        protected override void OnLayout(LayoutEventArgs levent)
+        {
+            if(arranging || flpControls == null || lblText == null || picImage == null) return;
+            arranging = true;
+            try
+            {
+                int inset = 16.DpiZoom();
+                int gap = 12.DpiZoom();
+                int actionWidth = 0;
+                int actionHeight = 0;
+                foreach(Control action in flpControls.Controls)
+                {
+                    if(!action.Visible && Visible) continue;
+                    actionWidth += action.Width + action.Margin.Horizontal;
+                    actionHeight = Math.Max(actionHeight, action.Height);
+                }
+                bool showImage = HasImage && Image != null;
+                int contentLeft = inset + Padding.Left;
+                int textLeft = showImage ? contentLeft + picImage.Width + gap : contentLeft;
+                bool stacked = actionWidth > 0 && ClientSize.Width - actionWidth - textLeft - gap < 180.DpiZoom();
+                int textWidth = Math.Max(1, ClientSize.Width - textLeft - Padding.Right - (stacked ? inset : actionWidth + gap));
+                int textHeight = WrapText
+                    ? TextRenderer.MeasureText(Text, Font, new Size(textWidth, int.MaxValue),
+                        TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix | TextFormatFlags.TextBoxControl).Height
+                    : Font.Height;
+                int contentHeight = Math.Max(showImage ? picImage.Height : 0, textHeight);
+                if(!stacked) contentHeight = Math.Max(contentHeight, actionHeight);
+                int requiredHeight = Math.Max(52.DpiZoom(), contentHeight + 24.DpiZoom()
+                    + (stacked ? actionHeight + gap : 0));
+                if(!WrapText && stacked && !actionsStacked) unstackedHeight = Height;
+                if(WrapText || stacked) Height = requiredHeight;
+                else if(actionsStacked) Height = unstackedHeight;
+                actionsStacked = stacked;
+                int mainHeight = stacked ? Height - actionHeight - gap : Height;
+                picImage.Visible = showImage;
+                picImage.Location = new Point(contentLeft, Math.Max(0, (mainHeight - picImage.Height) / 2));
+                lblText.SetBounds(textLeft, 8.DpiZoom(), textWidth, Math.Max(1, mainHeight - 16.DpiZoom()));
+                flpControls.SetBounds(Math.Max(0, ClientSize.Width - actionWidth), stacked ? mainHeight : 0,
+                    actionWidth, stacked ? actionHeight : Height);
+                foreach(Control action in flpControls.Controls)
+                {
+                    int top = Math.Max(0, (flpControls.Height - action.Height) / 2);
+                    Padding margin = new Padding(0, top, action.Margin.Right, 0);
+                    if(action.Margin != margin) action.Margin = margin;
+                }
+                base.OnLayout(levent);
+            }
+            finally { arranging = false; }
+        }
+        protected override void OnFontChanged(EventArgs e)
+        {
+            base.OnFontChanged(e);
+            if(lblText != null) { lblText.Font = base.Font; PerformLayout(); }
+        }
         protected override void OnMouseDown(MouseEventArgs e)
         {
-            base.OnMouseDown(e); OnMouseEnter(null);
+            base.OnMouseDown(e);
+            OnMouseEnter(EventArgs.Empty);
+            if(e.Button == MouseButtons.Left) Focus();
         }
-
-        private void CenterControl(Control ctr)
+        protected override void OnGotFocus(EventArgs e) { base.OnGotFocus(e); Invalidate(); }
+        protected override void OnLostFocus(EventArgs e) { base.OnLostFocus(e); Invalidate(); }
+        protected override void OnKeyDown(KeyEventArgs e)
         {
-            void reSize()
+            if(e.KeyCode == Keys.Apps || e.Shift && e.KeyCode == Keys.F10)
             {
-                if(ctr.Parent == null) return;
-                int top = (this.ClientSize.Height - ctr.Height) / 2;
-                ctr.Top = top;
-                if(ctr.Parent == flpControls)
-                {
-                    ctr.Margin = new Padding(0, top, ctr.Margin.Right, top);
-                }
+                ContextMenuStrip?.Show(this, new Point(18.DpiZoom(), Height));
+                e.Handled = true;
             }
-            ctr.Parent.Resize += (sender, e) => reSize();
-            ctr.Resize += (sender, e) => reSize();
-            reSize();
+            base.OnKeyDown(e);
         }
-
-        public void AddCtr(Control ctr)
+        protected override void OnMouseLeave(EventArgs e)
         {
-            AddCtr(ctr, 20.DpiZoom());
+            base.OnMouseLeave(e);
+            if(!ClientRectangle.Contains(PointToClient(Cursor.Position)) && Parent is MyList list && list.HoveredItem == this)
+                list.HoveredItem = null;
         }
-
+        internal void ApplyTheme()
+        {
+            bool selected = (Parent as MyList)?.HoveredItem == this;
+            BackColor = selected ? FluentTheme.Hover : FluentTheme.Surface;
+            ForeColor = !Enabled ? FluentTheme.Muted : selected && SystemInformation.HighContrast ? SystemColors.HighlightText : FluentTheme.Foreground;
+            lblText.BackColor = BackColor;
+            picImage.BackColor = BackColor;
+            flpControls.BackColor = BackColor;
+            pnlScrollbar.BackColor = BackColor;
+            lblSeparator.BackColor = FluentTheme.Border;
+            foreach(Control action in flpControls.Controls) action.BackColor = BackColor;
+            Invalidate();
+        }
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            Rectangle bounds = new Rectangle(0, 0, Math.Max(1, Width - 1), Math.Max(1, Height - 1));
+            using(Pen pen = new Pen(FluentTheme.Border))
+                e.Graphics.DrawLine(pen, 16.DpiZoom(), bounds.Bottom, bounds.Right - 16.DpiZoom(), bounds.Bottom);
+            if(Focused && ShowFocusCues)
+                ControlPaint.DrawFocusRectangle(e.Graphics, Rectangle.Inflate(bounds, -3, -3), FluentTheme.Foreground, BackColor);
+        }
+        public void AddCtr(Control ctr) => AddCtr(ctr, 12.DpiZoom());
         public void AddCtr(Control ctr, int space)
         {
-            this.SuspendLayout();
-            ctr.Parent = flpControls;
             ctr.Margin = new Padding(0, 0, space, 0);
-            ctr.MouseEnter += (sender, e) => this.OnMouseEnter(e);
-            ctr.MouseDown += (sender, e) => this.OnMouseEnter(e);
-            CenterControl(ctr);
-            this.ResumeLayout();
+            ctr.MouseEnter += OnActionMouseEnter;
+            ctr.MouseDown += OnActionMouseDown;
+            ctr.MouseLeave += OnActionMouseLeave;
+            ctr.SizeChanged += OnActionSizeChanged;
+            ctr.VisibleChanged += OnActionSizeChanged;
+            flpControls.Controls.Add(ctr);
+            if(string.IsNullOrEmpty(ctr.AccessibleName) && ctr is MyCheckBox) ctr.AccessibleName = Text;
+            PerformLayout();
         }
-
-        public void AddCtrs(Control[] ctrs)
-        {
-            Array.ForEach(ctrs, ctr => AddCtr(ctr));
-        }
-
+        private void OnActionMouseEnter(object sender, EventArgs e) => OnMouseEnter(e);
+        private void OnActionMouseDown(object sender, MouseEventArgs e) => OnMouseEnter(e);
+        private void OnActionMouseLeave(object sender, EventArgs e) => OnMouseLeave(e);
+        private void OnActionSizeChanged(object sender, EventArgs e) => PerformLayout();
+        public void AddCtrs(Control[] ctrs) => Array.ForEach(ctrs, AddCtr);
         public void RemoveCtrAt(int index)
         {
-            if(flpControls.Controls.Count > index) flpControls.Controls.RemoveAt(index + 1);
+            if(index < 0 || index + 1 >= flpControls.Controls.Count) return;
+            Control control = flpControls.Controls[index + 1];
+            control.MouseEnter -= OnActionMouseEnter;
+            control.MouseDown -= OnActionMouseDown;
+            control.MouseLeave -= OnActionMouseLeave;
+            control.SizeChanged -= OnActionSizeChanged;
+            control.VisibleChanged -= OnActionSizeChanged;
+            flpControls.Controls.Remove(control);
         }
-
-        public int GetCtrIndex(Control ctr)
+        protected override void Dispose(bool disposing)
         {
-            return flpControls.Controls.GetChildIndex(ctr, true) - 1;
+            if(disposing)
+            {
+                ContextMenuStrip menu = ContextMenuStrip;
+                ContextMenuStrip = null;
+                menu?.Dispose();
+            }
+            base.Dispose(disposing);
         }
-
-        public void SetCtrIndex(Control ctr, int newIndex)
-        {
-            flpControls.Controls.SetChildIndex(ctr, newIndex + 1);
-        }
+        public int GetCtrIndex(Control ctr) => flpControls.Controls.GetChildIndex(ctr, true) - 1;
+        public void SetCtrIndex(Control ctr, int newIndex) => flpControls.Controls.SetChildIndex(ctr, newIndex + 1);
     }
 }

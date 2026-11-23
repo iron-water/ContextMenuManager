@@ -20,18 +20,23 @@ namespace Rmemu.Controls
         }
 
         private string filePath;
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string FilePath
         {
             get => filePath;
             set
             {
+                ShellLink replacement = new ShellLink(value);
+                ShellLink previous = this.ShellLink;
                 filePath = value;
-                this.ShellLink = new ShellLink(value);
+                this.ShellLink = replacement;
+                previous?.Dispose();
                 this.Text = this.ItemText;
                 this.Image = this.ItemImage;
             }
         }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string ItemText
         {
             get
@@ -51,6 +56,7 @@ namespace Rmemu.Controls
             }
         }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public bool ItemVisible
         {
             get => (File.GetAttributes(FilePath) & FileAttributes.Hidden) != FileAttributes.Hidden;
@@ -98,16 +104,27 @@ namespace Rmemu.Controls
         private string FileName => Path.GetFileName(FilePath);
         private Image ItemImage => ItemIcon?.ToBitmap() ?? AppImage.NotFound;
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public VisibleCheckBox ChkVisible { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public MenuButton BtnShowMenu { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public ChangeTextMenuItem TsiChangeText { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public WebSearchMenuItem TsiSearch { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public FilePropertiesMenuItem TsiFileProperties { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public FileLocationMenuItem TsiFileLocation { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public ShortcutCommandMenuItem TsiChangeCommand { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public RunAsAdministratorItem TsiAdministrator { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public DeleteMeMenuItem TsiDeleteMe { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public MoveButton BtnMoveUp { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public MoveButton BtnMoveDown { get; set; }
 
         readonly ToolStripMenuItem TsiDetails = new ToolStripMenuItem(AppString.Menu.Details);
@@ -217,12 +234,17 @@ namespace Rmemu.Controls
             ExplorerRestarter.Show();
         }
 
+        protected override void Dispose(bool disposing)
+        {
+            if(disposing) { ShellLink?.Dispose(); ShellLink = null; }
+            base.Dispose(disposing);
+        }
+
         public void DeleteMe()
         {
             File.Delete(FilePath);
             DesktopIni.DeleteLocalizedFileNames(FilePath);
             ExplorerRestarter.Show();
-            this.ShellLink.Dispose();
         }
     }
 }

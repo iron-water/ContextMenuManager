@@ -9,71 +9,31 @@ namespace BluePointLilac.Controls
     {
         public ReadOnlyTextBox()
         {
+            this.Font = FluentTheme.BodyFont;
+            this.BorderStyle = BorderStyle.FixedSingle;
+            this.HideSelection = false;
             this.ReadOnly = true;
             this.Multiline = true;
-            this.ShortcutsEnabled = false;
-            this.BackColor = Color.White;
-            this.ForeColor = Color.FromArgb(80, 80, 80);
-            this.Font = SystemFonts.MenuFont;
-            this.Font = new Font(this.Font.FontFamily, this.Font.Size + 1F);
+            this.ShortcutsEnabled = true;
+            this.BackColor = FluentTheme.Surface;
+            this.ForeColor = FluentTheme.Foreground;
         }
 
-        const int WM_SETFOCUS = 0x0007;
-        const int WM_KILLFOCUS = 0x0008;
-        protected override void WndProc(ref Message m)
-        {
-            switch(m.Msg)
-            {
-                case WM_SETFOCUS:
-                    m.Msg = WM_KILLFOCUS; break;
-            }
-            base.WndProc(ref m);
-        }
-
-        private bool firstEnter = true;
-
-        protected override void OnMouseEnter(EventArgs e)
-        {
-            base.OnMouseEnter(e);
-            if(firstEnter) this.Focus();
-            firstEnter = false;
-        }
     }
 
     public sealed class ReadOnlyRichTextBox : RichTextBox
     {
         public ReadOnlyRichTextBox()
         {
+            this.Font = FluentTheme.BodyFont;
+            this.HideSelection = false;
             this.ReadOnly = true;
             this.Dock = DockStyle.Fill;
-            this.BackColor = Color.White;
+            this.BackColor = FluentTheme.Surface;
             this.BorderStyle = BorderStyle.None;
-            this.ForeColor = Color.FromArgb(80, 80, 80);
-            this.Font = SystemFonts.MenuFont;
-            this.Font = new Font(this.Font.FontFamily, this.Font.Size + 1F);
+            this.ForeColor = FluentTheme.Foreground;
         }
 
-        const int WM_SETFOCUS = 0x0007;
-        const int WM_KILLFOCUS = 0x0008;
-
-        protected override void WndProc(ref Message m)
-        {
-            switch(m.Msg)
-            {
-                case WM_SETFOCUS:
-                    m.Msg = WM_KILLFOCUS; break;
-            }
-            base.WndProc(ref m);
-        }
-
-        private bool firstEnter = true;
-
-        protected override void OnMouseEnter(EventArgs e)
-        {
-            base.OnMouseEnter(e);
-            if(firstEnter) this.Focus();
-            firstEnter = false;
-        }
 
         protected override void OnLinkClicked(LinkClickedEventArgs e)
         {

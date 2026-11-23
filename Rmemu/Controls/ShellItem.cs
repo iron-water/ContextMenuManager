@@ -38,6 +38,7 @@ namespace Rmemu.Controls
         }
 
         private string regPath;
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string RegPath
         {
             get => regPath;
@@ -130,7 +131,8 @@ namespace Rmemu.Controls
                 if(!TryProtectOpenItem()) return;
                 if(value) Registry.SetValue(RegPath, "ShowAsDisabledIfHidden", "");
                 else RegistryEx.DeleteValue(RegPath, "ShowAsDisabledIfHidden");
-                if(value && !ItemVisible) ItemVisible = false;
+                if(value && !ItemVisible && !ChangeHistory.TryChangeVisibility(this, false, out _, out string error, true))
+                    throw new IOException(error);
             }
         }
 
@@ -166,78 +168,74 @@ namespace Rmemu.Controls
             }
         }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public bool ItemVisible
         {
             get
             {
-                if(WinOsVersion.Current >= WinOsVersion.Win10_1703)
+                using(RegistryKey key = RegistryEx.GetRegistryKey(RegPath))
                 {
-                    //HideBasedOnVelocityId键值仅适用于Win10系统1703以上版本
-                    if(Convert.ToInt32(Registry.GetValue(RegPath, "HideBasedOnVelocityId", 0)) == 0x639bc8) return false;
+                    if(key == null) throw new IOException(AppString.W("MenuKeyDeleted"));
+                    if(WinOsVersion.Current >= WinOsVersion.Win10_1703 && Convert.ToInt32(key.GetValue("HideBasedOnVelocityId", 0)) == 0x639bc8) return false;
+                    if(!IsSubItem)
+                    {
+                        if(key.GetValue("LegacyDisable", null) != null || key.GetValue("ProgrammaticAccessOnly", null) != null) return false;
+                        if(WinOsVersion.Current > WinOsVersion.Vista && (Convert.ToInt32(key.GetValue("CommandFlags", 0)) & 8) != 0) return false;
+                    }
+                    return true;
                 }
-                if(!IsSubItem)
-                {
-                    //LegacyDisable和ProgrammaticAccessOnly键值不适用于子菜单
-                    if(Registry.GetValue(RegPath, "LegacyDisable", null) != null) return false;
-                    if(Registry.GetValue(RegPath, "ProgrammaticAccessOnly", null) != null) return false;
-                    //CommandFlags键值不适用于Vista系统，子菜单中该键值我用来做分割线键值
-                    if(WinOsVersion.Current > WinOsVersion.Vista && Convert.ToInt32(Registry.GetValue(RegPath, "CommandFlags", 0)) % 16 >= 8) return false;
-                }
-                return true;
             }
             set
             {
-                try
-                {
-                    void DeleteSomeValues()
-                    {
-                        RegistryEx.DeleteValue(RegPath, "LegacyDisable");
-                        RegistryEx.DeleteValue(RegPath, "ProgrammaticAccessOnly");
-                        if(WinOsVersion.Current > WinOsVersion.Vista && Convert.ToInt32(Registry.GetValue(RegPath, "CommandFlags", 0)) % 16 >= 8)
-                        {
-                            RegistryEx.DeleteValue(RegPath, "CommandFlags");
-                        }
-                    };
-
-                    if(value)
-                    {
-                        RegistryEx.DeleteValue(RegPath, "HideBasedOnVelocityId");
-                        DeleteSomeValues();
-                    }
-                    else
-                    {
-                        if(WinOsVersion.Current >= WinOsVersion.Win10_1703)
-                        {
-                            Registry.SetValue(RegPath, "HideBasedOnVelocityId", 0x639bc8);
-                        }
-                        else
-                        {
-                            if(IsSubItem)
-                            {
-                                AppMessageBox.Show(AppString.Message.CannotHideSubItem);
-                                return;
-                            }
-                        }
-                        if(!IsSubItem)
-                        {
-                            //当LegaryDisable键值作用于文件夹-"在新窗口中打开"时
-                            //会导致点击任务栏explorer图标和 Win+E 快捷键错误访问
-                            if(!RegPath.StartsWith(OpenInNewWindowPath, StringComparison.OrdinalIgnoreCase))
-                            {
-                                Registry.SetValue(RegPath, "LegacyDisable", "");
-                            }
-                            Registry.SetValue(RegPath, "ProgrammaticAccessOnly", "");
-                        }
-                        if(ShowAsDisabledIfHidden) DeleteSomeValues();
-                    }
-                }
-                catch
-                {
-                    AppMessageBox.Show(AppString.Message.AuthorityProtection);
-                }
+                if(!ChangeHistory.TryChangeVisibility(this, value, out _, out string error))
+                    throw new IOException(error);
             }
         }
 
+        internal RegistryHistoryNode CreateVisibilitySnapshot(RegistryHistoryNode original, bool visible)
+        {
+            RegistryHistoryNode result = ChangeHistory.CloneNode(original);
+            void Remove(string name) => result.Values.RemoveAll(value => value.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+            void Set(string name, RegistryValueKind kind, string data)
+            {
+                Remove(name);
+                result.Values.Add(new RegistryHistoryValue { Name = name, Kind = kind, Data = new[] { data } });
+            }
+            void RemoveLegacyValues()
+            {
+                Remove("LegacyDisable");
+                Remove("ProgrammaticAccessOnly");
+                RegistryHistoryValue flags = result.Values.Find(value => value.Name.Equals("CommandFlags", StringComparison.OrdinalIgnoreCase));
+                if(WinOsVersion.Current > WinOsVersion.Vista && flags != null && (Convert.ToInt32(flags.GetData()) & 8) != 0)
+                {
+                    int remaining = Convert.ToInt32(flags.GetData()) & ~8;
+                    if(remaining == 0) Remove("CommandFlags");
+                    else Set("CommandFlags", RegistryValueKind.DWord, remaining.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                }
+            }
+            if(visible)
+            {
+                Remove("HideBasedOnVelocityId");
+                RemoveLegacyValues();
+            }
+            else
+            {
+                if(WinOsVersion.Current >= WinOsVersion.Win10_1703)
+                    Set("HideBasedOnVelocityId", RegistryValueKind.DWord, (0x639bc8).ToString(System.Globalization.CultureInfo.InvariantCulture));
+                else if(IsSubItem) throw new InvalidOperationException(AppString.Message.CannotHideSubItem);
+                if(!IsSubItem)
+                {
+                    if(!RegPath.Equals(OpenInNewWindowPath, StringComparison.OrdinalIgnoreCase))
+                        Set("LegacyDisable", RegistryValueKind.String, "");
+                    Set("ProgrammaticAccessOnly", RegistryValueKind.String, "");
+                }
+                if(result.Values.Exists(value => value.Name.Equals("ShowAsDisabledIfHidden", StringComparison.OrdinalIgnoreCase))) RemoveLegacyValues();
+            }
+            result.Values.Sort((left, right) => StringComparer.OrdinalIgnoreCase.Compare(left.Name, right.Name));
+            return result;
+        }
+
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string ItemText
         {
             get
@@ -275,6 +273,7 @@ namespace Rmemu.Controls
             }
         }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string ItemCommand
         {
             get
@@ -300,6 +299,7 @@ namespace Rmemu.Controls
             }
         }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string IconLocation
         {
             get => Registry.GetValue(RegPath, "Icon", null)?.ToString();
@@ -310,7 +310,9 @@ namespace Rmemu.Controls
             }
         }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string IconPath { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public int IconIndex { get; set; }
         public Icon ItemIcon
         {
@@ -357,16 +359,27 @@ namespace Rmemu.Controls
             }
         }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public VisibleCheckBox ChkVisible { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public MenuButton BtnShowMenu { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public ChangeTextMenuItem TsiChangeText { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public ChangeIconMenuItem TsiChangeIcon { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public ChangeCommandMenuItem TsiChangeCommand { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public WebSearchMenuItem TsiSearch { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public FilePropertiesMenuItem TsiFileProperties { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public FileLocationMenuItem TsiFileLocation { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public RegLocationMenuItem TsiRegLocation { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public DeleteMeMenuItem TsiDeleteMe { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public RegExportMenuItem TsiRegExport { get; set; }
 
         protected readonly PictureButton BtnSubItems = new PictureButton(AppImage.SubItems);

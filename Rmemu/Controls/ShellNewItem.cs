@@ -53,6 +53,7 @@ namespace Rmemu.Controls
         }
 
         private string regPath;
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string RegPath
         {
             get => regPath;
@@ -69,6 +70,7 @@ namespace Rmemu.Controls
         public string Extension => RegPath.Split('\\')[1];
         private string SnKeyName => RegistryEx.GetKeyName(RegPath);
         private string BackupPath => $@"{RegistryEx.GetParentPath(RegPath)}\{(ItemVisible ? SnParts[1] : SnParts[0])}";
+        public string[] ExtraBackupPaths => new[] { BackupPath };
         private string OpenMode => FileExtension.GetOpenMode(Extension);//关联打开方式
         private string OpenModePath => $@"{RegistryEx.CLASSES_ROOT}\{OpenMode}";//关联打开方式注册表路径
         private string DefaultOpenMode => Registry.GetValue($@"{RegistryEx.CLASSES_ROOT}\{Extension}", "", null)?.ToString();//HKCR默认值打开方式
@@ -105,16 +107,19 @@ namespace Rmemu.Controls
             }
         }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public bool ItemVisible
         {
             get => SnKeyName.Equals(SnParts[0], StringComparison.OrdinalIgnoreCase);
             set
             {
+                if(value == ItemVisible) return;
                 RegistryEx.MoveTo(RegPath, BackupPath);
                 this.RegPath = BackupPath;
             }
         }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string ItemText
         {
             get
@@ -140,6 +145,7 @@ namespace Rmemu.Controls
             }
         }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string IconLocation
         {
             get
@@ -169,7 +175,9 @@ namespace Rmemu.Controls
             }
         }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string IconPath { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public int IconIndex { get; set; }
 
         private object InitialData
@@ -178,6 +186,7 @@ namespace Rmemu.Controls
             set => Registry.SetValue(RegPath, "Data", value);
         }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string ItemCommand
         {
             get => Registry.GetValue(RegPath, "Command", null)?.ToString();
@@ -197,6 +206,7 @@ namespace Rmemu.Controls
             }
         }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public bool BeforeSeparator
         {
             get
@@ -226,18 +236,31 @@ namespace Rmemu.Controls
         }
 
         public ShellNewList Owner { get; private set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public MoveButton BtnMoveUp { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public MoveButton BtnMoveDown { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public MenuButton BtnShowMenu { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public VisibleCheckBox ChkVisible { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public ChangeTextMenuItem TsiChangeText { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public ChangeIconMenuItem TsiChangeIcon { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public WebSearchMenuItem TsiSearch { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public FilePropertiesMenuItem TsiFileProperties { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public FileLocationMenuItem TsiFileLocation { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public RegLocationMenuItem TsiRegLocation { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public DeleteMeMenuItem TsiDeleteMe { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public RegExportMenuItem TsiRegExport { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public ChangeCommandMenuItem TsiChangeCommand { get; set; }
 
         readonly ToolStripMenuItem TsiDetails = new ToolStripMenuItem(AppString.Menu.Details);

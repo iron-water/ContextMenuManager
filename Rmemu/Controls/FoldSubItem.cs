@@ -12,19 +12,20 @@ namespace Rmemu.Controls
 {
     class FoldSubItem : MyListItem
     {
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public FoldGroupItem FoldGroupItem { get; set; }
 
         public void Indent()
         {
-            int w = 40.DpiZoom();
-            this.Controls["Image"].Left += w;
-            this.Controls["Text"].Left += w;
+            Padding = new Padding(28.DpiZoom(), 0, 0, 0);
         }
     }
 
     class FoldGroupItem : MyListItem, IBtnShowMenuItem
     {
+        public event EventHandler FoldStateChanged;
         private bool isFold;
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public bool IsFold
         {
             get => isFold;
@@ -33,12 +34,16 @@ namespace Rmemu.Controls
                 if(isFold == value) return;
                 isFold = value;
                 FoldMe(value);
+                FoldStateChanged?.Invoke(this, EventArgs.Empty);
             }
         }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string GroupPath { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public PathType PathType { get; set; }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public MenuButton BtnShowMenu { get; set; }
         readonly PictureButton btnFold;
         readonly PictureButton btnOpenPath;

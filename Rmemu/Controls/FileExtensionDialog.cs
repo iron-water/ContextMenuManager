@@ -8,6 +8,7 @@ namespace Rmemu.Controls
 {
     sealed class FileExtensionDialog : SelectDialog
     {
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string Extension
         {
             get => Selected.Trim();

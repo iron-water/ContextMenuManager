@@ -14,6 +14,7 @@ namespace Rmemu.Controls
 
         public void LoadItems()
         {
+            if(Directory.Exists(SendToPath))
             foreach(string path in Directory.GetFileSystemEntries(SendToPath))
             {
                 if(Path.GetFileName(path).ToLower() == "desktop.ini") continue;
@@ -56,7 +57,7 @@ namespace Rmemu.Controls
             MyListItem item = new MyListItem
             {
                 Text = Path.GetFileNameWithoutExtension(SendToPath),
-                Image = ResourceIcon.GetFolderIcon(SendToPath).ToBitmap()
+                Image = (ResourceIcon.GetFolderIcon(SendToPath)?.ToBitmap()) ?? AppImage.NotFound
             };
             PictureButton btnPath = new PictureButton(AppImage.Open);
             ToolTipBox.SetToolTip(btnPath, AppString.Menu.FileLocation);
@@ -66,7 +67,7 @@ namespace Rmemu.Controls
             item.ContextMenuStrip = new ContextMenuStrip();
             ToolStripMenuItem tsiRestoreDefault = new ToolStripMenuItem(AppString.Menu.RestoreDefault);
             item.ContextMenuStrip.Items.Add(tsiRestoreDefault);
-            tsiRestoreDefault.Enabled = Directory.Exists(DefaultSendToPath);
+            tsiRestoreDefault.Enabled = Directory.Exists(DefaultSendToPath) && Directory.Exists(SendToPath);
             tsiRestoreDefault.Click += (sender, e) =>
             {
                 if(AppMessageBox.Show(AppString.Message.RestoreDefault, MessageBoxButtons.OKCancel) == DialogResult.OK)

@@ -24,6 +24,7 @@ namespace Rmemu.Controls
 
         sealed class NewIEForm : NewItemForm
         {
+            [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
             public string RegPath { get; set; }
 
             protected override void InitializeComponents()

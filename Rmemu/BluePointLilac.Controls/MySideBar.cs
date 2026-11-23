@@ -1,4 +1,4 @@
-﻿using BluePointLilac.Methods;
+using BluePointLilac.Methods;
 using System;
 using System.Drawing;
 using System.Windows.Forms;
@@ -9,20 +9,15 @@ namespace BluePointLilac.Controls
     {
         public MySideBar()
         {
-            this.Dock = DockStyle.Left;
-            this.ItemHeight = 30.DpiZoom();
-            this.Font = SystemFonts.MenuFont;
-            this.Font = new Font(this.Font.FontFamily, this.Font.Size + 1F);
-            this.ForeColor = Color.FromArgb(80, 80, 80);
-            this.BackColor = Color.FromArgb(245, 245, 245);
-            this.BackgroundImageLayout = ImageLayout.None;
-            this.Controls.AddRange(new Control[] { LblSeparator, PnlSelected, PnlHovered });
-            PnlHovered.Paint += PaintItem;
-            PnlSelected.Paint += PaintItem;
-            this.SelectedIndex = -1;
+            SetStyle(ControlStyles.Selectable | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint, true);
+            TabStop = true;
+            Dock = DockStyle.Left;
+            ItemHeight = 36.DpiZoom();
+            ApplyTheme();
         }
 
         private string[] itemNames;
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string[] ItemNames
         {
             get => itemNames;
@@ -33,183 +28,152 @@ namespace BluePointLilac.Controls
                 {
                     int maxWidth = 0;
                     Array.ForEach(value, str => maxWidth = Math.Max(maxWidth, GetItemWidth(str)));
-                    this.Width = maxWidth + 2 * HorizontalSpace;
+                    Width = maxWidth;
                 }
-                PnlHovered.Width = PnlSelected.Width = this.Width;
-                PaintItems();
                 SelectedIndex = -1;
+                HoveredIndex = -1;
+                Invalidate();
             }
         }
-
         private int itemHeight;
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public int ItemHeight
         {
             get => itemHeight;
-            set => PnlHovered.Height = PnlSelected.Height = itemHeight = value;
-        }//项上下边缘距离
-        public int TopSpace { get; set; } = 2.DpiZoom();//第一项顶部与上边缘的距离
-        public int HorizontalSpace { get; set; } = 20.DpiZoom();//项文字与项左右边缘距离
-        private float VerticalSpace => (itemHeight - TextHeight) * 0.5F;//项文字与项上下边缘距离
-        private int TextHeight => TextRenderer.MeasureText(" ", Font).Height;//项文字高度
-        public bool IsFixedWidth { get; set; } = true;//是否固定宽度
+            set { itemHeight = Math.Max(1, value); Invalidate(); }
+        }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+        public int TopSpace { get; set; } = 8.DpiZoom();
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+        public int HorizontalSpace { get; set; } = 20.DpiZoom();
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+        public bool IsFixedWidth { get; set; } = true;
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+        public Color SeparatorColor { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+        public Color SelectedBackColor { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+        public Color HoveredBackColor { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+        public Color SelectedForeColor { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+        public Color HoveredForeColor { get; set; }
+        public int GetItemWidth(string str) => TextRenderer.MeasureText(str, Font).Width + 2 * HorizontalSpace;
 
-        public Color SeparatorColor
+        internal void ApplyTheme()
         {
-            get => LblSeparator.BackColor;
-            set => LblSeparator.BackColor = value;
-        }//分隔线颜色
-        public Color SelectedBackColor
-        {
-            get => PnlSelected.BackColor;
-            set => PnlSelected.BackColor = value;
+            BackColor = FluentTheme.Background;
+            ForeColor = FluentTheme.Foreground;
+            SeparatorColor = FluentTheme.Border;
+            SelectedBackColor = HoveredBackColor = FluentTheme.Hover;
+            SelectedForeColor = SystemInformation.HighContrast ? SystemColors.HighlightText : FluentTheme.Foreground;
+            HoveredForeColor = SelectedForeColor;
+            Invalidate();
         }
-        public Color HoveredBackColor
+        protected override void OnPaint(PaintEventArgs e)
         {
-            get => PnlHovered.BackColor;
-            set => PnlHovered.BackColor = value;
-        }
-        public Color SelectedForeColor
-        {
-            get => PnlSelected.ForeColor;
-            set => PnlSelected.ForeColor = value;
-        }
-        public Color HoveredForeColor
-        {
-            get => PnlHovered.ForeColor;
-            set => PnlHovered.ForeColor = value;
-        }
-
-        readonly Panel PnlSelected = new Panel
-        {
-            BackColor = Color.FromArgb(40, 140, 210),
-            ForeColor = Color.White,
-            Enabled = false
-        };
-        readonly Panel PnlHovered = new Panel
-        {
-            BackColor = Color.FromArgb(80, 180, 250),
-            ForeColor = Color.White,
-            Enabled = false
-        };
-        readonly Label LblSeparator = new Label
-        {
-            BackColor = Color.FromArgb(220, 220, 220),
-            Dock = DockStyle.Right,
-            Width = 1,
-        };
-
-        /// <summary>获取项目宽度</summary>
-        public int GetItemWidth(string str)
-        {
-            return TextRenderer.MeasureText(str, Font).Width + 2 * HorizontalSpace;
-        }
-
-        /// <summary>绘制所有项目作为底图</summary>
-        private void PaintItems()
-        {
-            this.BackgroundImage = new Bitmap(Width, ItemHeight * ItemNames.Length);
-            using(Graphics g = Graphics.FromImage(BackgroundImage))
-            {
-                g.Clear(BackColor);
-                if(itemNames == null) return;
-                for(int i = 0; i < itemNames.Length; i++)
-                {
-                    if(itemNames[i] != null)
-                    {
-                        g.DrawString(itemNames[i], Font, new SolidBrush(ForeColor),
-                            new PointF(HorizontalSpace, TopSpace + i * ItemHeight + VerticalSpace));
-                    }
-                    else
-                    {
-                        g.DrawLine(new Pen(SeparatorColor),
-                            new PointF(HorizontalSpace, TopSpace + (i + 0.5F) * ItemHeight),
-                            new PointF(Width - HorizontalSpace, TopSpace + (i + 0.5F) * ItemHeight)
-                        );
-                    }
-                }
-            }
-        }
-
-        /// <summary>刷新选中的项目</summary>
-        private void RefreshItem(Panel panel, int index)
-        {
-            panel.CreateGraphics().Clear(panel.BackColor);
-            panel.Top = index < 0 ? -ItemHeight : (TopSpace + index * ItemHeight);
-            panel.Text = index < 0 ? null : ItemNames[index];
-            panel.Refresh();
-        }
-
-        /// <summary>绘制选中的项目</summary>
-        private void PaintItem(object sender, PaintEventArgs e)
-        {
-            Control ctr = (Control)sender;
-            e.Graphics.DrawString(ctr.Text, Font,
-                new SolidBrush(ctr.ForeColor),
-                new PointF(HorizontalSpace, VerticalSpace));
-        }
-
-        /// <summary>显示选中的项目</summary>
-        private void ShowItem(Panel panel, MouseEventArgs e)
-        {
+            base.OnPaint(e);
             if(itemNames == null) return;
-            int index = (e.Y - TopSpace) / ItemHeight;
-            if(index >= itemNames.Length || index < 0 || string.IsNullOrEmpty(itemNames[index]) || index == SelectedIndex)
+            for(int i = 0; i < itemNames.Length; i++)
             {
-                this.Cursor = Cursors.Default;
-                HoveredIndex = SelectedIndex;
+                Rectangle row = new Rectangle(6.DpiZoom(), TopSpace + i * ItemHeight, Math.Max(0, Width - 12.DpiZoom()), ItemHeight - 2.DpiZoom());
+                if(row.Bottom < e.ClipRectangle.Top || row.Top > e.ClipRectangle.Bottom) continue;
+                if(string.IsNullOrEmpty(itemNames[i]))
+                {
+                    using(Pen pen = new Pen(SeparatorColor))
+                        e.Graphics.DrawLine(pen, HorizontalSpace, row.Top + row.Height / 2, Width - HorizontalSpace, row.Top + row.Height / 2);
+                    continue;
+                }
+                bool selected = i == SelectedIndex;
+                bool hovered = i == HoveredIndex;
+                if(selected || hovered)
+                {
+                    using(Brush brush = new SolidBrush(selected ? SelectedBackColor : HoveredBackColor))
+                        e.Graphics.FillRectangle(brush, row);
+                }
+                if(selected)
+                {
+                    using(Brush brush = new SolidBrush(SystemInformation.HighContrast ? SystemColors.HighlightText : FluentTheme.Accent))
+                        e.Graphics.FillRectangle(brush, row.Left, row.Top + 8.DpiZoom(), 3.DpiZoom(), Math.Max(1, row.Height - 16.DpiZoom()));
+                }
+                Rectangle textBounds = new Rectangle(HorizontalSpace, row.Top, Math.Max(0, Width - HorizontalSpace * 2), row.Height);
+                TextRenderer.DrawText(e.Graphics, itemNames[i], Font, textBounds,
+                    selected ? SelectedForeColor : hovered ? HoveredForeColor : ForeColor,
+                    TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
+                if(selected && Focused && ShowFocusCues)
+                    ControlPaint.DrawFocusRectangle(e.Graphics, Rectangle.Inflate(row, -2, -2), ForeColor, BackColor);
             }
-            else
-            {
-                this.Cursor = Cursors.Hand;
-                if(panel == PnlSelected) SelectedIndex = index;
-                else HoveredIndex = index;
-            }
+            using(Pen pen = new Pen(SeparatorColor)) e.Graphics.DrawLine(pen, Width - 1, 0, Width - 1, Height);
         }
-
+        private int HitIndex(int y)
+        {
+            if(itemNames == null || y < TopSpace) return -1;
+            int index = (y - TopSpace) / ItemHeight;
+            return index < itemNames.Length && !string.IsNullOrEmpty(itemNames[index]) ? index : -1;
+        }
         protected override void OnMouseMove(MouseEventArgs e)
         {
             base.OnMouseMove(e);
-            ShowItem(PnlHovered, e);
+            HoveredIndex = HitIndex(e.Y);
+            Cursor = HoveredIndex < 0 ? Cursors.Default : Cursors.Hand;
         }
         protected override void OnMouseDown(MouseEventArgs e)
         {
             base.OnMouseDown(e);
-            if(e.Button == MouseButtons.Left) ShowItem(PnlSelected, e);
+            if(e.Button != MouseButtons.Left) return;
+            Focus();
+            int index = HitIndex(e.Y);
+            if(index >= 0) SelectedIndex = index;
         }
-        protected override void OnMouseLeave(EventArgs e)
+        protected override void OnMouseLeave(EventArgs e) { base.OnMouseLeave(e); HoveredIndex = -1; }
+        protected override void OnGotFocus(EventArgs e) { base.OnGotFocus(e); Invalidate(); }
+        protected override void OnLostFocus(EventArgs e) { base.OnLostFocus(e); Invalidate(); }
+        protected override bool IsInputKey(Keys keyData)
         {
-            base.OnMouseLeave(e);
-            HoveredIndex = SelectedIndex;
+            Keys key = keyData & Keys.KeyCode;
+            return key == Keys.Up || key == Keys.Down || key == Keys.Home || key == Keys.End || base.IsInputKey(keyData);
         }
-
+        protected override void OnKeyDown(KeyEventArgs e)
+        {
+            if(itemNames != null && itemNames.Length > 0 && (e.KeyCode == Keys.Up || e.KeyCode == Keys.Down || e.KeyCode == Keys.Home || e.KeyCode == Keys.End))
+            {
+                int direction = e.KeyCode == Keys.Up || e.KeyCode == Keys.End ? -1 : 1;
+                int index = e.KeyCode == Keys.Home ? -1 : e.KeyCode == Keys.End ? itemNames.Length : SelectedIndex;
+                if(index < 0 && direction < 0) index = itemNames.Length;
+                for(index += direction; index >= 0 && index < itemNames.Length; index += direction)
+                    if(!string.IsNullOrEmpty(itemNames[index])) { SelectedIndex = index; break; }
+                e.Handled = true;
+            }
+            base.OnKeyDown(e);
+        }
         public event EventHandler SelectIndexChanged;
-
         public event EventHandler HoverIndexChanged;
-
-        private int selectIndex;
+        private int selectIndex = -1;
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public int SelectedIndex
         {
             get => selectIndex;
             set
             {
-                if(selectIndex == value) return;
-                HoveredIndex = value;
-                RefreshItem(PnlSelected, value);
+                if(value < -1 || value >= (itemNames?.Length ?? 0) || selectIndex == value) return;
                 selectIndex = value;
-                SelectIndexChanged?.Invoke(this, null);
+                HoveredIndex = value;
+                AccessibleName = value >= 0 ? itemNames[value] : null;
+                Invalidate();
+                SelectIndexChanged?.Invoke(this, EventArgs.Empty);
             }
         }
-
-        private int hoverIndex;
+        private int hoverIndex = -1;
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public int HoveredIndex
         {
             get => hoverIndex;
             set
             {
                 if(hoverIndex == value) return;
-                RefreshItem(PnlHovered, value);
                 hoverIndex = value;
-                HoverIndexChanged?.Invoke(this, null);
+                Invalidate();
+                HoverIndexChanged?.Invoke(this, EventArgs.Empty);
             }
         }
     }

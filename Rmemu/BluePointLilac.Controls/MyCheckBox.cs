@@ -1,4 +1,5 @@
 ﻿using BluePointLilac.Methods;
+using Rmemu.Methods;
 using System;
 using System.ComponentModel;
 using System.Drawing;
@@ -12,41 +13,41 @@ namespace BluePointLilac.Controls
     {
         public MyCheckBox()
         {
-            this.Image = TurnOff;
-            this.Cursor = Cursors.Hand;
-            this.SizeMode = PictureBoxSizeMode.AutoSize;
+            SetStyle(ControlStyles.Selectable | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint, true);
+            Cursor = Cursors.Hand;
+            TabStop = true;
+            SizeMode = PictureBoxSizeMode.Normal;
+            Size = new Size(44, 28).DpiZoom();
+            AccessibleRole = AccessibleRole.CheckButton;
         }
 
-        private bool? _Checked = null;
+        private bool? _Checked;
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public bool Checked
         {
             get => _Checked == true;
             set
             {
                 if(_Checked == value) return;
-                this.Image = SwitchImage(value);
                 if(_Checked == null)
                 {
-                    _Checked = value;
+                    SetCheckedSilently(value);
                     return;
                 }
-                if(PreCheckChanging != null && !PreCheckChanging.Invoke())
-                {
-                    this.Image = SwitchImage(!value);
-                    return;
-                }
-                else CheckChanging?.Invoke();
-                if(PreCheckChanged != null && !PreCheckChanged.Invoke())
-                {
-                    this.Image = SwitchImage(!value);
-                    return;
-                }
-                else
-                {
-                    _Checked = value;
-                    CheckChanged?.Invoke();
-                }
+                if(PreCheckChanging != null && !PreCheckChanging.Invoke()) return;
+                CheckChanging?.Invoke();
+                if(PreCheckChanged != null && !PreCheckChanged.Invoke()) return;
+                SetCheckedSilently(value);
+                CheckChanged?.Invoke();
             }
+        }
+
+        public void SetCheckedSilently(bool value)
+        {
+            _Checked = value;
+            Image = value ? TurnOnImage : TurnOffImage;
+            Invalidate();
+            if(IsHandleCreated) AccessibilityNotifyClients(AccessibleEvents.StateChange, -1);
         }
 
         public Func<bool> PreCheckChanging;
@@ -54,69 +55,87 @@ namespace BluePointLilac.Controls
         public Action CheckChanging;
         public Action CheckChanged;
 
-        public Image TurnOnImage { get; set; } = TurnOn;
-        public Image TurnOffImage { get; set; } = TurnOff;
-
-        private Image SwitchImage(bool value)
+        private Image turnOnImage;
+        private Image turnOffImage;
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+        public Image TurnOnImage
         {
-            return value ? TurnOnImage : TurnOffImage;
+            get => turnOnImage;
+            set { turnOnImage = value; if(Checked) { Image = value; Invalidate(); } }
         }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+        public Image TurnOffImage
+        {
+            get => turnOffImage;
+            set { turnOffImage = value; if(!Checked) { Image = value; Invalidate(); } }
+        }
+
+        protected virtual void OnUserToggle() { if(Enabled) Checked = !Checked; }
 
         protected override void OnMouseDown(MouseEventArgs e)
         {
             base.OnMouseDown(e);
-            if(e.Button == MouseButtons.Left) this.Checked = !this.Checked;
+            if(e.Button != MouseButtons.Left) return;
+            Focus();
+            OnUserToggle();
+        }
+        protected override void OnKeyDown(KeyEventArgs e)
+        {
+            if(e.KeyCode == Keys.Space || e.KeyCode == Keys.Enter)
+            {
+                OnUserToggle();
+                e.Handled = e.SuppressKeyPress = true;
+            }
+            base.OnKeyDown(e);
+        }
+        protected override void OnGotFocus(EventArgs e) { base.OnGotFocus(e); Invalidate(); }
+        protected override void OnLostFocus(EventArgs e) { base.OnLostFocus(e); Invalidate(); }
+        protected override void OnEnabledChanged(EventArgs e) { base.OnEnabledChanged(e); Invalidate(); }
+
+        internal void ApplyTheme() => Invalidate();
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            if(Image == null)
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                int trackWidth = Math.Min(40.DpiZoom(), Math.Max(4, Width - 4.DpiZoom()));
+                int trackHeight = Math.Min(20.DpiZoom(), Math.Max(4, Height - 4.DpiZoom()));
+                Rectangle track = new Rectangle((Width - trackWidth) / 2, (Height - trackHeight) / 2, trackWidth, trackHeight);
+                int diameter = Math.Max(1, Math.Min(track.Width, track.Height) - 1);
+                Color fill = !Enabled ? FluentTheme.Border : Checked ? FluentTheme.Accent : BackColor;
+                Color outline = Checked && Enabled ? FluentTheme.Accent : FluentTheme.Muted;
+                using(GraphicsPath path = new GraphicsPath())
+                {
+                    path.AddArc(track.Left, track.Top, diameter, diameter, 90, 180);
+                    path.AddArc(track.Right - diameter, track.Top, diameter, diameter, 270, 180);
+                    path.CloseFigure();
+                    using(Brush brush = new SolidBrush(fill)) e.Graphics.FillPath(brush, path);
+                    using(Pen pen = new Pen(outline)) e.Graphics.DrawPath(pen, path);
+                }
+                int inset = 4.DpiZoom();
+                int knob = Math.Max(1, track.Height - inset * 2);
+                Color knobColor = Checked && Enabled
+                    ? SystemInformation.HighContrast ? SystemColors.HighlightText : FluentTheme.IsDark ? FluentTheme.Background : Color.White
+                    : Enabled ? FluentTheme.Foreground : FluentTheme.Muted;
+                using(Brush brush = new SolidBrush(knobColor))
+                    e.Graphics.FillEllipse(brush, Checked ? track.Right - knob - inset : track.Left + inset,
+                        track.Top + (track.Height - knob) / 2, knob, knob);
+            }
+            if(Focused && ShowFocusCues)
+                ControlPaint.DrawFocusRectangle(e.Graphics, new Rectangle(0, 0, Width - 1, Height - 1), FluentTheme.Foreground, BackColor);
         }
 
-        private static readonly Image TurnOn = DrawImage(true);
-        private static readonly Image TurnOff = DrawImage(false);
-
-        private static Image DrawImage(bool value)
+        protected override AccessibleObject CreateAccessibilityInstance() => new SwitchAccessibleObject(this);
+        private sealed class SwitchAccessibleObject : ControlAccessibleObject
         {
-            int w = 80.DpiZoom();
-            int r1 = 16.DpiZoom();
-            float r2 = 13F.DpiZoom();
-            int d1 = r1 * 2;
-            float d2 = r2 * 2;
-            float a = r1 - r2;
-            Bitmap bitmap = new Bitmap(w, d1);
-            using(Graphics g = Graphics.FromImage(bitmap))
-            {
-                g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                g.CompositingQuality = CompositingQuality.HighQuality;
-                g.PixelOffsetMode = PixelOffsetMode.HighQuality;
-                g.SmoothingMode = SmoothingMode.HighQuality;
-                using(GraphicsPath path = new GraphicsPath())
-                {
-                    path.AddArc(new RectangleF(0, 0, d1, d1), 90, 180);
-                    path.AddLine(new PointF(r1, 0), new PointF(w - r1, 0));
-                    path.AddArc(new RectangleF(w - d1, 0, d1, d1), -90, 180);
-                    path.AddLine(new PointF(w - r1, d1), new PointF(r1, d1));
-                    Color color = value ? Color.FromArgb(0, 138, 217) : Color.FromArgb(130, 136, 144);
-                    using(Brush brush = new SolidBrush(color))
-                    {
-                        g.FillPath(brush, path);
-                    }
-                }
-                using(GraphicsPath path = new GraphicsPath())
-                {
-                    path.AddArc(new RectangleF(a, a, d2, d2), 90, 180);
-                    path.AddLine(new PointF(r1, a), new PointF(w - r1, a));
-                    path.AddArc(new RectangleF(w - d2 - a, a, d2, d2), -90, 180);
-                    path.AddLine(new PointF(w - r1, d2 + a), new PointF(r1, d2 + a));
-                    Color color = value ? Color.FromArgb(0, 162, 255) : Color.FromArgb(153, 160, 169);
-                    using(Brush brush = new SolidBrush(color))
-                    {
-                        g.FillPath(brush, path);
-                    }
-                }
-                using(GraphicsPath path = new GraphicsPath())
-                {
-                    path.AddEllipse(new RectangleF(value ? (w - d2 - a) : a, a, d2, d2));
-                    g.FillPath(Brushes.White, path);
-                }
-            }
-            return bitmap;
+            private readonly MyCheckBox owner;
+            public SwitchAccessibleObject(MyCheckBox owner) : base(owner) { this.owner = owner; }
+            public override AccessibleRole Role => AccessibleRole.CheckButton;
+            public override string DefaultAction => AppString.W("Toggle");
+            public override AccessibleStates State => base.State | (owner.Checked ? AccessibleStates.Checked : AccessibleStates.None);
+            public override void DoDefaultAction() { if(owner.Enabled) owner.OnUserToggle(); }
         }
     }
 }

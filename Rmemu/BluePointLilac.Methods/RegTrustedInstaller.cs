@@ -183,10 +183,7 @@ namespace BluePointLilac.Methods
                     key = RegistryEx.GetRegistryKey(regPath, RegistryKeyPermissionCheck.ReadWriteSubTree, RegistryRights.TakeOwnership);
 
                     RegistrySecurity security = key.GetAccessControl(AccessControlSections.All);
-
-                    //得到真正所有者
-                    //IdentityReference oldId = security.GetOwner(typeof(SecurityIdentifier));
-                    //SecurityIdentifier siTrustedInstaller = new SecurityIdentifier(oldId.ToString());
+                    IdentityReference originalOwner = security.GetOwner(typeof(SecurityIdentifier));
 
                     //使进程用户成为所有者
                     security.SetOwner(id.User);
@@ -198,21 +195,11 @@ namespace BluePointLilac.Methods
                     security.AddAccessRule(fullAccess);
                     key.SetAccessControl(security);
 
-                    //注册表操作（写入、删除）
-                    //key.SetValue("temp", "");//示例
-
-                    //恢复原有所有者
-                    //security.SetOwner(siTrustedInstaller);
-                    //key.SetAccessControl(security);
-
-                    //收回原有权利
-                    //security.RemoveAccessRule(fullAccess);
-                    //key.SetAccessControl(security);
-
-                    ///得到真正所有者、注册表操作、恢复原有所有者、收回原有权利，这四部分在原文中没有被注释掉
-                    ///但是如果保留这四部分，会在恢复原有所有者这一步抛出异常，提示没有权限，
-                    ///不过我发现经过上面的操作，虽然无法还原所有者权限，但是已经获取了注册表权限
-                    ///即已经将TrustedInstaller权限更改为当前管理员用户权限，我要的目的已经达到了
+                    //恢复原有所有者；失败则保留当前管理员所有权以避免写权限丢失。
+                    try { security.SetOwner(originalOwner); key.SetAccessControl(security); }
+                    catch { }
+                    try { security.RemoveAccessRule(fullAccess); key.SetAccessControl(security); }
+                    catch { }
                 }
                 catch { }
             }

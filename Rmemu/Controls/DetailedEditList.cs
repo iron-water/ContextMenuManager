@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Windows.Forms;
 using System.Xml;
 
@@ -12,6 +13,7 @@ namespace Rmemu.Controls
 {
     sealed class DetailedEditList : SwitchDicList
     {
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public Guid GroupGuid { get; set; }
 
         public override void LoadItems()
@@ -75,8 +77,17 @@ namespace Rmemu.Controls
                     string GetRuleFullRegPath(string regPath)
                     {
                         if(string.IsNullOrEmpty(regPath)) regPath = groupItem.GroupPath;
-                        else if(regPath.StartsWith("\\")) regPath = groupItem.GroupPath + regPath;
-                        return regPath;
+                        else if(regPath.StartsWith("\\"))
+                        {
+                            string relative = regPath.TrimStart('\\');
+                            if(relative.Split('\\').Any(segment => string.IsNullOrWhiteSpace(segment) || segment == "." || segment == "..")) return null;
+                            regPath = groupItem.GroupPath + "\\" + relative;
+                        }
+                        if(regPath == null || regPath.IndexOf('\0') >= 0 || regPath.Split('\\').Any(string.IsNullOrWhiteSpace)) return null;
+                        string rootName = RegistryEx.GetRootName(regPath);
+                        return rootName.Equals("HKEY_CURRENT_USER", StringComparison.OrdinalIgnoreCase)
+                            || rootName.Equals("HKEY_LOCAL_MACHINE", StringComparison.OrdinalIgnoreCase)
+                            || rootName.Equals("HKEY_CLASSES_ROOT", StringComparison.OrdinalIgnoreCase) ? regPath : null;
                     };
 
                     foreach(XmlElement itemXE in groupXN.SelectNodes("Item"))
@@ -153,9 +164,11 @@ namespace Rmemu.Controls
                                 if(itemXE.SelectSingleNode("IsNumberItem") != null)
                                 {
                                     XmlElement ruleXE = (XmlElement)itemXE.SelectSingleNode("Rule");
+                                    string numberRulePath = GetRuleFullRegPath(ruleXE.GetAttribute("RegPath"));
+                                    if(numberRulePath == null) continue;
                                     var rule = new NumberRegRuleItem.RegRule
                                     {
-                                        RegPath = GetRuleFullRegPath(ruleXE.GetAttribute("RegPath")),
+                                        RegPath = numberRulePath,
                                         ValueName = ruleXE.GetAttribute("ValueName"),
                                         ValueKind = XmlDicHelper.GetValueKind(ruleXE.GetAttribute("ValueKind"), RegistryValueKind.DWord),
                                         DefaultValue = defaultValue,
@@ -167,9 +180,11 @@ namespace Rmemu.Controls
                                 else if(itemXE.SelectSingleNode("IsStringItem") != null)
                                 {
                                     XmlElement ruleXE = (XmlElement)itemXE.SelectSingleNode("Rule");
+                                    string stringRulePath = GetRuleFullRegPath(ruleXE.GetAttribute("RegPath"));
+                                    if(stringRulePath == null) continue;
                                     var rule = new StringRegRuleItem.RegRule
                                     {
-                                        RegPath = GetRuleFullRegPath(ruleXE.GetAttribute("RegPath")),
+                                        RegPath = stringRulePath,
                                         ValueName = ruleXE.GetAttribute("ValueName"),
                                     };
                                     ruleItem = new StringRegRuleItem(rule, info);
@@ -181,9 +196,11 @@ namespace Rmemu.Controls
                                     for(int i = 0; i < ruleXNList.Count; i++)
                                     {
                                         XmlElement ruleXE = (XmlElement)ruleXNList[i];
+                                        string visibleRulePath = GetRuleFullRegPath(ruleXE.GetAttribute("RegPath"));
+                                        if(visibleRulePath == null) continue;
                                         rules[i] = new VisibleRegRuleItem.RegRule
                                         {
-                                            RegPath = GetRuleFullRegPath(ruleXE.GetAttribute("RegPath")),
+                                            RegPath = visibleRulePath,
                                             ValueName = ruleXE.GetAttribute("ValueName"),
                                             ValueKind = XmlDicHelper.GetValueKind(ruleXE.GetAttribute("ValueKind"), RegistryValueKind.DWord)
                                         };

@@ -23,8 +23,11 @@ namespace Rmemu.Controls
             InitializeComponents();
         }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string ItemText { get => txtText.Text; set => txtText.Text = value; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string ItemFilePath { get => txtFilePath.Text; set => txtFilePath.Text = value; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string Arguments { get => txtArguments.Text; set => txtArguments.Text = value; }
         public string ItemCommand
         {

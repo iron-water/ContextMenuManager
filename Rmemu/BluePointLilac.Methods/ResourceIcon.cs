@@ -15,8 +15,16 @@ namespace BluePointLilac.Methods
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool DestroyIcon(IntPtr hIcon);
 
-        [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true, BestFitMapping = false, ThrowOnUnmappableChar = true)]
-        private static extern IntPtr LoadLibrary(string lpLibFileName);
+        private const uint LOAD_LIBRARY_AS_DATAFILE = 0x00000002;
+        private const uint LOAD_LIBRARY_AS_IMAGE_RESOURCE = 0x00000020;
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern IntPtr LoadLibraryEx(string lpLibFileName, IntPtr hFile, uint dwFlags);
+
+        private static IntPtr LoadIconResourceModule(string iconPath)
+        {
+            return LoadLibraryEx(iconPath, IntPtr.Zero, LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE);
+        }
 
         [DllImport("kernel32.dll")]
         private static extern bool FreeLibrary(IntPtr hLibModule);
@@ -148,14 +156,21 @@ namespace BluePointLilac.Methods
             //iconIndex为负数就是指定资源标识符, 为正数就是该图标在资源文件中的顺序序号, 为-1时不能使用ExtractIconEx提取图标
             if(iconIndex == -1)
             {
-                hInst = LoadLibrary(iconPath);
+                hInst = LoadIconResourceModule(iconPath);
+                if(hInst == IntPtr.Zero) return null;
                 hIcons[0] = LoadImage(hInst, "#1", 1, SystemInformation.IconSize.Width, SystemInformation.IconSize.Height, 0);
             }
             else ExtractIconEx(iconPath, iconIndex, hIcons, null, 1);
 
-            try { icon = (Icon)Icon.FromHandle(hIcons[0]).Clone(); }
-            catch { icon = null; }
-            finally { DestroyIcon(hIcons[0]); FreeLibrary(hInst); }//释放资源
+            try
+            {
+                if(hIcons[0] != IntPtr.Zero) icon = (Icon)Icon.FromHandle(hIcons[0]).Clone();
+            }
+            finally
+            {
+                if(hIcons[0] != IntPtr.Zero) DestroyIcon(hIcons[0]);
+                if(hInst != IntPtr.Zero) FreeLibrary(hInst);
+            }
             return icon;
         }
 

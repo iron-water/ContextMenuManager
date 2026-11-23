@@ -1,12 +1,11 @@
-﻿using System.Drawing;
-using System.Windows;
+﻿using System;
+using System.Drawing;
 using System.Windows.Forms;
 
 namespace BluePointLilac.Methods
 {
     /// <summary>处理不同DPI缩放比下的像素绘制和字体显示问题</summary>
-    /// <remarks>使用此类需要添加引用 PresentationFramework
-    /// 还应在配置清单App.manifest中启用DPI感知自动缩放
+    /// <remarks>在配置清单 App.manifest 中启用系统 DPI 感知。
     /// Font为矢量类型，Point、Size、Rectangle、Padding等为像素类型。
     /// 在不同DPI缩放下，矢量类型等比缩放，像素类型保持不变，故会出现排版显示问题。
     /// 解决方案一：项目中所有用到的像素类型实例值都取与缩放比之积，矢量类型不变。
@@ -14,7 +13,12 @@ namespace BluePointLilac.Methods
     public static class HighDpi
     {
         /// <summary>DPI缩放比</summary>
-        public static readonly double DpiScale = Screen.PrimaryScreen.Bounds.Width / SystemParameters.PrimaryScreenWidth;
+        public static readonly double DpiScale = GetDpiScale();
+
+        private static double GetDpiScale()
+        {
+            using(Graphics graphics = Graphics.FromHwnd(IntPtr.Zero)) return graphics.DpiX / 96.0;
+        }
 
         public static Point DpiZoom(this Point point) => new Point(DpiZoom(point.X), DpiZoom(point.Y));
 

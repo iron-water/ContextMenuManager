@@ -14,27 +14,28 @@ namespace Rmemu.Controls
             this.DoubleBuffered = false;
             this.Dock = DockStyle.Bottom;
             this.Image = AppImage.Explorer;
-            this.Text = AppString.Other.RestartExplorer;
-            ToolTipBox.SetToolTip(BtnRestart, AppString.Tip.RestartExplorer);
+            this.Text = AppString.W("ExplorerRestartNeeded");
+            ToolTipBox.SetToolTip(BtnRestart, AppString.W("ExplorerRestartTip"));
             this.AddCtr(BtnRestart);
             this.CanMoveForm();
             ShowHandler += () => this.Visible = true;
             HideHandler += () => this.Visible = false;
             BtnRestart.MouseDown += (sender, e) =>
             {
+                if(e.Button != MouseButtons.Left) return;
+                if(MessageBox.Show(this, AppString.W("ExplorerRestartWarn"), AppString.W("ApplyMenuChanges"), MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) != DialogResult.OK) return;
                 ExternalProgram.RestartExplorer();
                 this.Visible = false;
             };
         }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public new bool Visible
         {
             get => base.Visible;
             set
             {
-                bool flag = base.Visible != value && this.Parent != null;
                 base.Visible = value;
-                if(flag) this.Parent.Height += value ? Height : -Height;
             }
         }
 

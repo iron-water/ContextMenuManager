@@ -1,10 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
+using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Windows.Forms;
+using System.Security.Cryptography;
+using System.Text;
+using System.Threading;
 
 namespace BluePointLilac.Methods
 {
@@ -12,84 +14,77 @@ namespace BluePointLilac.Methods
     {
         [DllImport("user32.dll")]
         private static extern bool ShowWindowAsync(IntPtr hWnd, int cmdShow);
-
         [DllImport("user32.dll")]
         private static extern bool SetForegroundWindow(IntPtr hWnd);
 
-        /// <summary>判断单实例程序是否正在运行</summary>
-        /// <remarks>若正在运行激活窗口</remarks>
+        private static Mutex instanceMutex;
+        private static readonly object InstanceGate = new object();
+
         public static bool IsRunning()
         {
+            lock(InstanceGate)
+            {
+                if(instanceMutex != null) return false;
+                string executable = Path.GetFullPath(Application.ExecutablePath).ToUpperInvariant();
+                string name = @"Local\Rmemu-" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(executable)));
+                var candidate = new Mutex(false, name);
+                bool acquired;
+                try { acquired = candidate.WaitOne(0); }
+                catch(AbandonedMutexException) { acquired = true; }
+                if(acquired)
+                {
+                    instanceMutex = candidate; // Keep ownership until process exit, including the startup window.
+                    return false;
+                }
+                candidate.Dispose();
+            }
             using(Process current = Process.GetCurrentProcess())
             {
                 foreach(Process process in Process.GetProcessesByName(current.ProcessName))
-                {
                     using(process)
                     {
                         if(process.Id == current.Id) continue;
-                        if(process.MainModule.FileName == current.MainModule.FileName)
+                        try
                         {
-                            const int SW_RESTORE = 9;
-                            ShowWindowAsync(process.MainWindowHandle, SW_RESTORE);
+                            if(!string.Equals(process.MainModule?.FileName, current.MainModule?.FileName, StringComparison.OrdinalIgnoreCase)) continue;
+                            ShowWindowAsync(process.MainWindowHandle, 9);
                             SetForegroundWindow(process.MainWindowHandle);
                             return true;
                         }
+                        catch(Win32Exception) { /* A different integrity level may deny process inspection. */ }
+                        catch(InvalidOperationException) { /* The other process exited while being inspected. */ }
                     }
-                }
-                return false;
+                return true;
             }
         }
 
-        /// <summary>重启单实例程序</summary>
-        /// <param name="args">重启程序时传入参数</param>
-        /// <param name="updatePath">用于更新程序的新版本文件路径，为null则为普通重启</param>
-        public static void Restart(string[] args = null, string updatePath = null)
+        public static bool WaitForPreviousInstance(string[] args)
         {
-            string appPath = Application.ExecutablePath;
-            string command = appPath;
-            if(args != null && args.Length > 0) command += "," + string.Join(" ", args);
-            List<string> contents = new List<string>();
-            //vbs命令逐行执行不等待，故加些代码确定上一条命令执行是否完成
-            contents.AddRange(new[]
+            int index = Array.IndexOf(args, "--restart-from");
+            if(index < 0 || index + 1 >= args.Length || !int.TryParse(args[index + 1], out int id)) return true;
+            if(id == Environment.ProcessId) return true;
+            try
             {
-                "On Error Resume Next",
-                "WScript.Sleep 1000",//等待程序结束
-                "Dim wsh, fso",
-                "Set wsh = CreateObject(\"WScript.Shell\")",
-                "Set fso = CreateObject(\"Scripting.FileSystemObject\")",
-            });
-
-            if(File.Exists(updatePath))
-            {
-                contents.AddRange(new[]
+                using(Process previous = Process.GetProcessById(id))
                 {
-                    $"fso.DeleteFile \"{appPath}\"",
-                    $"Do While fso.FileExists(\"{appPath}\")",
-                        "WScript.Sleep 100",
-                    "Loop",//确定文件删除完成
-                    $"fso.MoveFile \"{updatePath}\",\"{appPath}\"",//更新文件
-                    $"Do While fso.FileExists(\"{updatePath}\")",//确定文件已被移动
-                        "WScript.Sleep 100",
-                    $"Loop",
-                });
+                    if(!string.Equals(previous.MainModule?.FileName, Application.ExecutablePath, StringComparison.OrdinalIgnoreCase)) return true;
+                    return previous.WaitForExit(10000);
+                }
             }
-            contents.AddRange(new[]
-            {
-                $"wsh.Run \"{command}\"",
-                "fso.DeleteFile(WScript.ScriptFullName)",//vbs自删命令
-                "Set wsh = Nothing",
-                "Set fso = Nothing",
-            });
+            catch(ArgumentException) { return true; }
+            catch(InvalidOperationException) { return true; }
+            catch(Win32Exception) { return true; }
+        }
 
-            string vbsPath = Path.GetTempPath() + Guid.NewGuid() + ".vbs";
-            File.WriteAllLines(vbsPath, contents.ToArray(), Encoding.Unicode);
-            Application.Exit();
-            using(Process process = new Process())
-            {
-                process.StartInfo.FileName = "wscript.exe";
-                process.StartInfo.Arguments = vbsPath;
-                process.Start();
-            }
+        public static void Restart(string[] args = null, bool elevated = false)
+        {
+            var start = new ProcessStartInfo(Application.ExecutablePath) { UseShellExecute = true };
+            if(elevated) start.Verb = "runas";
+            start.ArgumentList.Add("--restart-from");
+            start.ArgumentList.Add(Environment.ProcessId.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            if(args != null) foreach(string argument in args) start.ArgumentList.Add(argument);
+            using(Process process = Process.Start(start))
+                if(process != null) Application.Exit();
         }
     }
 }

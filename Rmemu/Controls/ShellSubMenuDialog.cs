@@ -12,9 +12,12 @@ namespace Rmemu.Controls
 {
     sealed class ShellSubMenuDialog : CommonDialog
     {
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public Icon Icon { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string Text { get; set; }
         /// <summary>子菜单的父菜单的注册表路径</summary>
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string ParentPath { get; set; }
         public override void Reset() { }
 
@@ -72,6 +75,7 @@ namespace Rmemu.Controls
         {
             readonly List<string> SubKeyNames = new List<string>();
             /// <summary>子菜单的父菜单的注册表路径</summary>
+            [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
             public string ParentPath { get; set; }
             /// <summary>菜单所处环境注册表路径</summary>
             private string ScenePath => RegistryEx.GetParentPath(RegistryEx.GetParentPath(ParentPath));
@@ -243,9 +247,12 @@ namespace Rmemu.Controls
                     ToolTipBox.SetToolTip(BtnDelete, AppString.Menu.Delete);
                 }
 
+                [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
                 public DeleteButton BtnDelete { get; set; }
                 public PulicMultiItemsList Owner { get; private set; }
+                [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
                 public MoveButton BtnMoveUp { get; set; }
+                [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
                 public MoveButton BtnMoveDown { get; set; }
 
                 public void DeleteMe()
@@ -260,6 +267,7 @@ namespace Rmemu.Controls
             readonly SubNewItem subNewItem = new SubNewItem(false);
 
             /// <summary>父菜单的注册表路径</summary>
+            [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
             public string ParentPath { get; set; }
             /// <summary>子菜单的Shell项注册表路径</summary>
             private string ShellPath { get; set; }
@@ -289,7 +297,6 @@ namespace Rmemu.Controls
                 using(var shellKey = RegistryEx.GetRegistryKey(ShellPath))
                 {
                     if(shellKey == null) return;
-                    RegTrustedInstaller.TakeRegTreeOwnerShip(shellKey.Name);
                     foreach(string keyName in shellKey.GetSubKeyNames())
                     {
                         string regPath = $@"{ShellPath}\{keyName}";
@@ -382,10 +389,12 @@ namespace Rmemu.Controls
                 {
                     string path1 = GetItemRegPath(item);
                     string path2 = GetItemRegPath(otherItem);
-                    string tempPath = ObjectPath.GetNewPathWithIndex(path1, ObjectPath.PathType.Registry);
-                    RegistryEx.MoveTo(path1, tempPath);
-                    RegistryEx.MoveTo(path2, path1);
-                    RegistryEx.MoveTo(tempPath, path2);
+                    if(!ChangeHistory.TrySwapRegistrations(path1, path2, out string error))
+                    {
+                        this.SetItemIndex(item, index);
+                        AppMessageBox.Show(error);
+                        return;
+                    }
                     SetItemRegPath(item, path2);
                     SetItemRegPath(otherItem, path1);
                 }
@@ -470,8 +479,11 @@ namespace Rmemu.Controls
                 ToolTipBox.SetToolTip(BtnDelete, AppString.Menu.Delete);
             }
 
+            [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
             public DeleteButton BtnDelete { get; set; }
+            [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
             public MoveButton BtnMoveUp { get; set; }
+            [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
             public MoveButton BtnMoveDown { get; set; }
 
             public virtual void DeleteMe() { }
@@ -487,7 +499,9 @@ namespace Rmemu.Controls
                 this.SetCtrIndex(BtnMoveUp, 2);
             }
 
+            [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
             public MoveButton BtnMoveUp { get; set; }
+            [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
             public MoveButton BtnMoveDown { get; set; }
 
             protected override bool IsSubItem => true;

@@ -14,6 +14,7 @@ namespace Rmemu.Controls.Interfaces
 
     sealed class ChangeCommandMenuItem : ToolStripMenuItem
     {
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public bool CommandCanBeEmpty { get; set; }
 
         public ChangeCommandMenuItem(ITsiCommandItem item) : base(AppString.Menu.ChangeCommand)

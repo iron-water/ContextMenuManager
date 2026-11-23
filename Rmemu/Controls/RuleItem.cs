@@ -5,6 +5,8 @@ using Rmemu.Methods;
 using Microsoft.Win32;
 using System;
 using System.Drawing;
+using System.Globalization;
+using System.IO;
 using System.Windows.Forms;
 
 namespace Rmemu.Controls
@@ -18,13 +20,48 @@ namespace Rmemu.Controls
             this.RestartExplorer = info.RestartExplorer;
             BtnShowMenu = new MenuButton(this);
             TsiSearch = new WebSearchMenuItem(this);
+            this.ContextMenuStrip?.Dispose();
             this.ContextMenuStrip = new ContextMenuStrip();
             this.ContextMenuStrip.Items.Add(TsiSearch);
         }
 
+        protected void BindNumberEditor(NumericUpDown editor, Func<int> read, Action<int> write, int defaultValue)
+        {
+            bool synchronizing = false;
+            void Synchronize()
+            {
+                synchronizing = true;
+                try
+                {
+                    editor.Value = read();
+                    editor.ForeColor = editor.Value == defaultValue ? Color.FromArgb(0, 138, 217) : FluentTheme.Foreground;
+                    editor.Enabled = true;
+                }
+                catch(Exception ex)
+                {
+                    editor.Enabled = false;
+                    editor.AccessibleDescription = AppString.W("ReadValueFailed", ex.Message);
+                    ToolTipBox.SetToolTip(editor, editor.AccessibleDescription);
+                }
+                finally { synchronizing = false; }
+            }
+            // Binding may clamp an out-of-range stored value for display, but never persists it.
+            Synchronize();
+            editor.ValueChanged += (sender, e) =>
+            {
+                if(synchronizing) return;
+                try { write((int)editor.Value); }
+                catch(Exception ex) { AppMessageBox.Show(AppString.W("SaveSettingFailed") + ex.Message); }
+                finally { Synchronize(); }
+            };
+        }
+
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public WebSearchMenuItem TsiSearch { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public MenuButton BtnShowMenu { get; set; }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public bool RestartExplorer { get; set; }
 
         public string SearchText
@@ -86,11 +123,15 @@ namespace Rmemu.Controls
         public VisibleRegRuleItem(RuleAndInfo ruleAndInfo)
             : this(ruleAndInfo.Rules, ruleAndInfo.ItemInfo) { }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public RegRule[] Rules { get; set; }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public VisibleCheckBox ChkVisible { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public RegLocationMenuItem TsiRegLocation { get; set; }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public bool ItemVisible
         {
             get
@@ -118,14 +159,8 @@ namespace Rmemu.Controls
                 foreach(RegRule rule in Rules)
                 {
                     object data = value ? rule.TurnOnValue : rule.TurnOffValue;
-                    if(data != null)
-                    {
-                        Registry.SetValue(rule.RegPath, rule.ValueName, data, rule.ValueKind);
-                    }
-                    else
-                    {
-                        RegistryEx.DeleteValue(rule.RegPath, rule.ValueName);
-                    }
+                    if(!ChangeHistory.TrySetRegistryValue(AppString.W("ChangeSetting", Text), rule.RegPath, rule.ValueName, data, rule.ValueKind, out string error))
+                        throw new IOException(error);
                 }
                 if(RestartExplorer) ExplorerRestarter.Show();
             }
@@ -246,6 +281,7 @@ namespace Rmemu.Controls
             TextAlign = HorizontalAlignment.Center,
             Width = 80.DpiZoom()
         };
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public RegLocationMenuItem TsiRegLocation { get; set; }
 
         public NumberRegRuleItem(RegRule rule, ItemInfo info) : base(info)
@@ -258,41 +294,33 @@ namespace Rmemu.Controls
             NudValue.Maximum = rule.MaxValue;
             NudValue.Minimum = rule.MinValue;
             NudValue.Font = new Font(this.Font.FontFamily, this.Font.Size + 3F);
-            NudValue.ValueChanged += (sender, e) =>
-            {
-                if(NudValue.Value == Rule.DefaultValue)
-                {
-                    NudValue.ForeColor = Color.FromArgb(0, 138, 217);
-                    NudValue.Font = new Font(NudValue.Font, FontStyle.Bold);
-                }
-                else
-                {
-                    NudValue.ForeColor = Color.Black;
-                    NudValue.Font = new Font(NudValue.Font, FontStyle.Regular);
-                }
-                this.ItemValue = (int)NudValue.Value;
-            };
-            NudValue.Value = ItemValue;
+            BindNumberEditor(NudValue, () => ItemValue, value => ItemValue = value, rule.DefaultValue);
         }
 
         public string RegPath => Rule.RegPath;
         public string ValueName => Rule.ValueName;
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public RegRule Rule { get; set; }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public int ItemValue
         {
             get
             {
                 object value = Registry.GetValue(Rule.RegPath, Rule.ValueName, null);
-                if(value == null) return Rule.DefaultValue;
-                int num = Convert.ToInt32(value);
-                if(num > Rule.MaxValue) return Rule.MaxValue;
-                if(num < Rule.MinValue) return Rule.MinValue;
-                else return num;
+                decimal number = value == null ? Rule.DefaultValue : Convert.ToDecimal(value, CultureInfo.InvariantCulture);
+                return (int)Math.Clamp(number, Rule.MinValue, Rule.MaxValue);
             }
             set
             {
-                Registry.SetValue(Rule.RegPath, Rule.ValueName, value, Rule.ValueKind);
+                if(value < Rule.MinValue || value > Rule.MaxValue) throw new ArgumentOutOfRangeException(nameof(value));
+                object data = Rule.ValueKind == RegistryValueKind.String || Rule.ValueKind == RegistryValueKind.ExpandString
+                    ? value.ToString(CultureInfo.InvariantCulture) : value;
+                if(!ChangeHistory.TrySetRegistryValue(AppString.W("ChangeSetting", Text), Rule.RegPath, Rule.ValueName, data, Rule.ValueKind, out string error))
+                    throw new IOException(error);
+                object actual = Registry.GetValue(Rule.RegPath, Rule.ValueName, null);
+                if(actual == null || Convert.ToDecimal(actual, CultureInfo.InvariantCulture) != value)
+                    throw new IOException(AppString.W("SavedValueMismatch"));
                 if(RestartExplorer) ExplorerRestarter.Show();
             }
         }
@@ -306,48 +334,60 @@ namespace Rmemu.Controls
             public string ValueName { get; set; }
         }
 
-        readonly Label LblValue = new Label
+        readonly Button BtnValue = new Button
         {
-            BorderStyle = BorderStyle.FixedSingle,
+            FlatStyle = FlatStyle.Flat,
             ForeColor = Color.FromArgb(80, 80, 80),
             Cursor = Cursors.Hand,
-            AutoSize = true
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            TabStop = true
         };
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public RegLocationMenuItem TsiRegLocation { get; set; }
 
         public StringRegRuleItem(RegRule rule, ItemInfo info) : base(info)
         {
-            this.AddCtr(LblValue);
-            ToolTipBox.SetToolTip(LblValue, info.Tip);
+            this.AddCtr(BtnValue);
+            ToolTipBox.SetToolTip(BtnValue, info.Tip);
+            BtnValue.AccessibleName = info.Text + AppString.W("EditValueSuffix");
+            BtnValue.AccessibleDescription = AppString.W("EditStringHint");
             TsiRegLocation = new RegLocationMenuItem(this);
             this.ContextMenuStrip.Items.AddRange(new ToolStripItem[] { new ToolStripSeparator(), TsiRegLocation });
             this.Rule = rule;
-            LblValue.Text = ItemValue;
-            LblValue.Font = new Font(this.Font.FontFamily, this.Font.Size + 3F);
-            LblValue.MouseDown += (sender, e) =>
+            BtnValue.Text = ItemValue;
+            BtnValue.Font = new Font(this.Font.FontFamily, this.Font.Size + 3F);
+            BtnValue.Click += (sender, e) =>
             {
                 using(InputDialog dlg = new InputDialog())
                 {
                     dlg.Title = AppString.Menu.ChangeText;
                     dlg.Text = ItemValue;
                     if(dlg.ShowDialog() != DialogResult.OK) return;
-                    ItemValue = LblValue.Text = dlg.Text;
+                    try
+                    {
+                        ItemValue = dlg.Text;
+                        BtnValue.Text = ItemValue;
+                    }
+                    catch(Exception ex) { AppMessageBox.Show(AppString.W("SaveSettingFailed") + ex.Message); }
                 }
             };
-            LblValue.TextChanged += (sender, e) => ItemValue = LblValue.Text;
         }
 
         public string RegPath => Rule.RegPath;
         public string ValueName => Rule.ValueName;
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public RegRule Rule { get; set; }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string ItemValue
         {
             get => Registry.GetValue(Rule.RegPath, Rule.ValueName, null)?.ToString();
             set
             {
-                Registry.SetValue(Rule.RegPath, Rule.ValueName, value);
+                if(!ChangeHistory.TrySetRegistryValue(AppString.W("ChangeSetting", Text), Rule.RegPath, Rule.ValueName, value ?? "", RegistryValueKind.String, out string error))
+                    throw new IOException(error);
                 if(RestartExplorer) ExplorerRestarter.Show();
             }
         }
@@ -372,9 +412,13 @@ namespace Rmemu.Controls
             ToolTipBox.SetToolTip(ChkVisible, info.Tip);
         }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public IniRule Rule { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public IniWriter IniWriter { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public VisibleCheckBox ChkVisible { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public bool ItemVisible
         {
             get => IniWriter.GetValue(Rule.Section, Rule.KeyName) == Rule.TurnOnValue;
@@ -407,24 +451,12 @@ namespace Rmemu.Controls
             NudValue.Maximum = rule.MaxValue;
             NudValue.Minimum = rule.MinValue;
             NudValue.Font = new Font(this.Font.FontFamily, this.Font.Size + 3F);
-            NudValue.ValueChanged += (sender, e) =>
-            {
-                if(NudValue.Value == Rule.DefaultValue)
-                {
-                    NudValue.ForeColor = Color.FromArgb(0, 138, 217);
-                    NudValue.Font = new Font(NudValue.Font, FontStyle.Bold);
-                }
-                else
-                {
-                    NudValue.ForeColor = Color.Black;
-                    NudValue.Font = new Font(NudValue.Font, FontStyle.Regular);
-                }
-                this.ItemValue = (int)NudValue.Value;
-            };
-            NudValue.Value = ItemValue;
+            BindNumberEditor(NudValue, () => ItemValue, value => ItemValue = value, rule.DefaultValue);
         }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public IniRule Rule { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public IniWriter IniWriter { get; set; }
 
         readonly NumericUpDown NudValue = new NumericUpDown
@@ -433,20 +465,22 @@ namespace Rmemu.Controls
             Width = 80.DpiZoom()
         };
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public int ItemValue
         {
             get
             {
                 string value = IniWriter.GetValue(Rule.Section, Rule.KeyName);
-                if(value.IsNullOrWhiteSpace()) return Rule.DefaultValue;
-                int num = Convert.ToInt32(value);
-                if(num > Rule.MaxValue) return Rule.MaxValue;
-                if(num < Rule.MinValue) return Rule.MinValue;
-                else return num;
+                decimal number = value.IsNullOrWhiteSpace() ? Rule.DefaultValue : Convert.ToDecimal(value, CultureInfo.InvariantCulture);
+                return (int)Math.Clamp(number, Rule.MinValue, Rule.MaxValue);
             }
             set
             {
-                IniWriter.SetValue(Rule.Section, Rule.KeyName, value);
+                if(value < Rule.MinValue || value > Rule.MaxValue) throw new ArgumentOutOfRangeException(nameof(value));
+                string requested = value.ToString(CultureInfo.InvariantCulture);
+                IniWriter.SetValue(Rule.Section, Rule.KeyName, requested);
+                if(IniWriter.GetValue(Rule.Section, Rule.KeyName) != requested)
+                    throw new IOException(AppString.W("SavedValueMismatch"));
                 if(RestartExplorer) ExplorerRestarter.Show();
             }
         }
@@ -462,44 +496,57 @@ namespace Rmemu.Controls
         }
 
 
-        readonly Label LblValue = new Label
+        readonly Button BtnValue = new Button
         {
-            BorderStyle = BorderStyle.FixedSingle,
+            FlatStyle = FlatStyle.Flat,
             ForeColor = Color.FromArgb(80, 80, 80),
             Cursor = Cursors.Hand,
-            AutoSize = true
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            TabStop = true
         };
 
         public StringIniRuleItem(IniRule rule, ItemInfo info) : base(info)
         {
             this.Rule = rule;
             this.IniWriter = new IniWriter(rule.IniPath);
-            this.AddCtr(LblValue);
-            ToolTipBox.SetToolTip(LblValue, info.Tip);
-            LblValue.Text = ItemValue;
-            LblValue.Font = new Font(this.Font.FontFamily, this.Font.Size + 3F);
-            LblValue.MouseDown += (sender, e) =>
+            this.AddCtr(BtnValue);
+            ToolTipBox.SetToolTip(BtnValue, info.Tip);
+            BtnValue.AccessibleName = info.Text + AppString.W("EditValueSuffix");
+            BtnValue.AccessibleDescription = AppString.W("EditStringHint");
+            BtnValue.Text = ItemValue;
+            BtnValue.Font = new Font(this.Font.FontFamily, this.Font.Size + 3F);
+            BtnValue.Click += (sender, e) =>
             {
                 using(InputDialog dlg = new InputDialog())
                 {
                     dlg.Title = AppString.Menu.ChangeText;
                     dlg.Text = ItemValue;
                     if(dlg.ShowDialog() != DialogResult.OK) return;
-                    ItemValue = LblValue.Text = dlg.Text;
+                    try
+                    {
+                        ItemValue = dlg.Text;
+                        BtnValue.Text = ItemValue;
+                    }
+                    catch(Exception ex) { AppMessageBox.Show(AppString.W("SaveSettingFailed") + ex.Message); }
                 }
             };
-            LblValue.TextChanged += (sender, e) => ItemValue = LblValue.Text;
         }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public IniRule Rule { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public IniWriter IniWriter { get; set; }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string ItemValue
         {
             get => IniWriter.GetValue(Rule.Secation, Rule.KeyName);
             set
             {
                 IniWriter.SetValue(Rule.Secation, Rule.KeyName, value);
+                if(IniWriter.GetValue(Rule.Secation, Rule.KeyName) != value)
+                    throw new IOException(AppString.W("SavedValueMismatch"));
                 if(RestartExplorer) ExplorerRestarter.Show();
             }
         }

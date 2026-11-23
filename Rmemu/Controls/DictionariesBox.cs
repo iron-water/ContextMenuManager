@@ -16,8 +16,7 @@ namespace Rmemu.Controls
             this.SuspendLayout();
             this.Dock = DockStyle.Fill;
             this.Controls.AddRange(pages);
-            this.Font = SystemFonts.MenuFont;
-            this.Font = new Font(this.Font.FontFamily, this.Font.Size + 1F);
+            this.Font = FluentTheme.BodyFont;
             cms.Items.AddRange(items);
             for(int i = 0; i < 6; i++)
             {
@@ -26,8 +25,16 @@ namespace Rmemu.Controls
             }
             items[0].Click += (sender, e) => ExternalProgram.OpenNotepadWithText(GetInitialText());
             items[2].Click += (sender, e) => SaveFile();
-            boxs[0].Controls.Add(btnOpenDir);
-            btnOpenDir.Top = boxs[0].Height - btnOpenDir.Height;
+            var actions = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Bottom,
+                AutoSize = true,
+                WrapContents = false,
+                Padding = new Padding(6.DpiZoom()),
+                FlowDirection = FlowDirection.LeftToRight
+            };
+            actions.Controls.Add(btnOpenDir);
+            pages[0].Controls.Add(actions);
             ToolTipBox.SetToolTip(btnOpenDir, AppString.Menu.FileLocation);
             btnOpenDir.MouseDown += (sender, e) => ExternalProgram.OpenDirectory(AppConfig.DicsDir);
             this.SelectedIndexChanged += (sender, e) => LoadText();
@@ -47,8 +54,7 @@ namespace Rmemu.Controls
         readonly ReadOnlyRichTextBox[] boxs = new ReadOnlyRichTextBox[6];
         readonly PictureButton btnOpenDir = new PictureButton(AppImage.Open)
         {
-            Anchor = AnchorStyles.Left | AnchorStyles.Bottom,
-            Left = 0
+            Margin = System.Windows.Forms.Padding.Empty
         };
         readonly ContextMenuStrip cms = new ContextMenuStrip();
         readonly ToolStripItem[] items =

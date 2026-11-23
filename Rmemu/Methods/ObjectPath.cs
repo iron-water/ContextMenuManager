@@ -125,8 +125,9 @@ namespace Rmemu.Methods
         /// <returns>返回移除非法字符后的文件或文件夹名称</returns>
         public static string RemoveIllegalChars(string fileName)
         {
+            if(fileName == null) return string.Empty;
             Array.ForEach(IllegalChars, c => fileName = fileName.Replace(c.ToString(), ""));
-            return fileName.Replace("\\", "").Replace(":", "");
+            return new string(fileName.Where(c => !char.IsControl(c) && c != '\\' && c != ':').ToArray());
         }
 
         /// <summary>判断文件或文件夹或注册表项是否存在</summary>

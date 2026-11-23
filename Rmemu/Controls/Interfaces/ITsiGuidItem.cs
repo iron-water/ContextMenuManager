@@ -34,6 +34,7 @@ namespace Rmemu.Controls.Interfaces
         readonly ToolStripMenuItem TsiAddGuidDic = new ToolStripMenuItem(AppString.Menu.AddGuidDic);
         readonly ToolStripMenuItem TsiClsidLocation = new ToolStripMenuItem(AppString.Menu.ClsidLocation);
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public ITsiGuidItem Item { get; set; }
 
         private void CopyGuid()
@@ -139,10 +140,14 @@ namespace Rmemu.Controls.Interfaces
 
         sealed class AddGuidDicDialog : CommonDialog
         {
+            [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
             public Image ItemIcon { get; set; }
+            [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
             public string ItemText { get; set; }
             public bool IsDelete { get; private set; }
+            [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
             public string ItemIconPath { get; set; }
+            [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
             public int ItemIconIndex { get; set; }
             public string ItemIconLocation
             {
@@ -192,17 +197,21 @@ namespace Rmemu.Controls.Interfaces
                     InitializeComponents();
                 }
 
+                [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
                 public string ItemText
                 {
                     get => txtName.Text;
                     set => txtName.Text = value;
                 }
+                [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
                 public Image ItemIcon
                 {
                     get => picIcon.Image;
                     set => picIcon.Image = value;
                 }
+                [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
                 public string ItemIconPath { get; set; }
+                [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
                 public int ItemIconIndex { get; set; }
                 public bool IsDelete { get; private set; }
 

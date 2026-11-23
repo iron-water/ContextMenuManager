@@ -25,25 +25,25 @@ namespace Rmemu.Controls.Interfaces
             };
             this.Click += (sender, e) =>
             {
-                using(SaveFileDialog dlg = new SaveFileDialog())
+                try
                 {
-                    string date = DateTime.Today.ToString("yyyy-MM-dd");
-                    string time = DateTime.Now.ToString("HH.mm.ss");
-                    string filePath = $@"{AppConfig.BackupDir}\{date}\{item.Text} - {time}.reg";
-                    string dirPath = Path.GetDirectoryName(filePath);
-                    string fileName = Path.GetFileName(filePath);
-                    Directory.CreateDirectory(dirPath);
-                    dlg.FileName = fileName;
-                    dlg.InitialDirectory = dirPath;
-                    dlg.Filter = $"{AppString.Dialog.RegistryFile}|*.reg";
-                    if(dlg.ShowDialog() == DialogResult.OK)
+                    using(SaveFileDialog dlg = new SaveFileDialog())
                     {
-                        ExternalProgram.ExportRegistry(item.RegPath, dlg.FileName);
+                        string date = DateTime.Today.ToString("yyyy-MM-dd");
+                        string time = DateTime.Now.ToString("HH.mm.ss.fffffff");
+                        string dirPath = Path.Combine(AppConfig.BackupDir, date);
+                        string fileName = ObjectPath.RemoveIllegalChars(item.Text) + " - " + time + ".reg";
+                        Directory.CreateDirectory(dirPath);
+                        dlg.FileName = fileName;
+                        dlg.InitialDirectory = dirPath;
+                        dlg.Filter = $"{AppString.Dialog.RegistryFile}|*.reg";
+                        if(dlg.ShowDialog() == DialogResult.OK)
+                            ExternalProgram.ExportRegistry(item.RegPath, dlg.FileName);
                     }
-                    if(Directory.GetFileSystemEntries(dirPath).Length == 0)
-                    {
-                        Directory.Delete(dirPath);
-                    }
+                }
+                catch(Exception ex)
+                {
+                    AppMessageBox.Show(AppString.W("ExportFailed") + ex.Message);
                 }
             };
         }

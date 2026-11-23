@@ -41,7 +41,7 @@ namespace Rmemu.Methods
         public static readonly string AppConfigDir = $@"{Application.StartupPath}\Config";
         public static readonly string AppDataDir = Environment.ExpandEnvironmentVariables(@"%AppData%\Rmemu");
         public static readonly string AppDataConfigDir = $@"{AppDataDir}\Config";
-        public static readonly string ConfigDir = Directory.Exists(AppConfigDir) ? AppConfigDir : AppDataConfigDir;
+        public static readonly string ConfigDir = SelectConfigDirectory(AppConfigDir, AppDataConfigDir);
         public static readonly bool SaveToAppDir = ConfigDir == AppConfigDir;
         public static readonly bool IsFirstRun = !Directory.Exists(ConfigDir);
         public static string ConfigIni = $@"{ConfigDir}\Config.ini";
@@ -79,47 +79,71 @@ namespace Rmemu.Methods
             { "360", "https://www.so.com/s?q=%s" },
         };
 
+        private static readonly object ConfigGate = new object();
         private static readonly IniReader ConfigReader = new IniReader(ConfigIni);
         private static readonly IniWriter ConfigWriter = new IniWriter(ConfigIni);
 
         private static string GetGeneralValue(string key)
         {
-            return ConfigReader.GetValue("General", key);
+            lock(ConfigGate) return ConfigReader.GetValue("General", key);
         }
 
         private static void SetGeneralValue(string key, object value)
         {
-            ConfigWriter.SetValue("General", key, value);
-            ReloadConfig();
+            lock(ConfigGate)
+            {
+                ConfigWriter.SetValue("General", key, value);
+                ReloadConfig();
+            }
         }
 
         private static string GetWindowValue(string key)
         {
-            return ConfigReader.GetValue("Window", key);
+            lock(ConfigGate) return ConfigReader.GetValue("Window", key);
         }
 
         private static void SetWindowValue(string key, object value)
         {
-            ConfigWriter.SetValue("Window", key, value);
-            ReloadConfig();
+            lock(ConfigGate)
+            {
+                ConfigWriter.SetValue("Window", key, value);
+                ReloadConfig();
+            }
         }
 
         public static void ReloadConfig()
         {
-            ConfigReader.LoadFile(ConfigIni);
+            lock(ConfigGate) ConfigReader.LoadFile(ConfigIni);
+        }
+
+        internal static string SelectConfigDirectory(string portable, string roaming)
+        {
+            if(!Directory.Exists(portable)) return roaming;
+            try
+            {
+                string probe = Path.Combine(portable, ".write-" + Guid.NewGuid().ToString("N"));
+                using(var stream = new FileStream(probe, FileMode.CreateNew, FileAccess.Write, FileShare.None, 1, FileOptions.DeleteOnClose)) { }
+                return portable;
+            }
+            catch(Exception ex) when(ex is IOException || ex is UnauthorizedAccessException || ex is System.Security.SecurityException)
+            {
+                return roaming;
+            }
         }
 
         private static void CreateDirectory()
         {
-            foreach(string dirPath in new[] { AppDataDir, ConfigDir, ProgramsDir, BackupDir, LangsDir, DicsDir, WebDicsDir, UserDicsDir })
+            foreach(string dirPath in new[] { ConfigDir, ProgramsDir, BackupDir, LangsDir, DicsDir, WebDicsDir, UserDicsDir })
             {
                 Directory.CreateDirectory(dirPath);
                 Application.ApplicationExit += (sender, e) =>
                 {
-                    if(Directory.Exists(dirPath) && Directory.GetFileSystemEntries(dirPath).Length == 0)
+                    try
                     {
-                        Directory.Delete(dirPath);
+                        if(Directory.Exists(dirPath) && Directory.GetFileSystemEntries(dirPath).Length == 0) Directory.Delete(dirPath);
                     }
+                    catch(IOException) { /* Another operation may still be using the directory. */ }
+                    catch(UnauthorizedAccessException) { /* Cleanup must not prevent application exit. */ }
                 };
             }
         }

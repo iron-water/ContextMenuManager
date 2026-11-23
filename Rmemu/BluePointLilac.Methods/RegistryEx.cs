@@ -1,5 +1,7 @@
 ﻿using Microsoft.Win32;
+using Rmemu.Methods;
 using System;
+using System.IO;
 using System.Security.AccessControl;
 
 namespace BluePointLilac.Methods
@@ -20,9 +22,12 @@ namespace BluePointLilac.Methods
 
         public static void CopyTo(this RegistryKey srcKey, RegistryKey dstKey)
         {
+            if(srcKey == null) throw new IOException(AppString.W("SourceKeyDeleted"));
+            if(dstKey == null) throw new IOException(AppString.W("TargetKeyUnavailable"));
+            CheckIndependentPaths(srcKey.Name, dstKey.Name);
             foreach(string name in srcKey.GetValueNames())
             {
-                dstKey.SetValue(name, srcKey.GetValue(name), srcKey.GetValueKind(name));
+                dstKey.SetValue(name, srcKey.GetValue(name, null, RegistryValueOptions.DoNotExpandEnvironmentNames), srcKey.GetValueKind(name));
             }
             foreach(string name in srcKey.GetSubKeyNames())
             {
@@ -34,23 +39,39 @@ namespace BluePointLilac.Methods
 
         public static void CopyTo(string srcPath, string dstPath)
         {
+            CheckIndependentPaths(srcPath, dstPath);
             using(RegistryKey srcKey = GetRegistryKey(srcPath))
-            using(RegistryKey dstKey = GetRegistryKey(dstPath, true, true))
             {
-                CopyTo(srcKey, dstKey);
+                if(srcKey == null) throw new IOException(AppString.W("SourceKeyDeletedAt", srcPath));
+                using(RegistryKey dstKey = GetRegistryKey(dstPath, true, true)) CopyTo(srcKey, dstKey);
             }
         }
 
         public static void MoveTo(this RegistryKey srcKey, RegistryKey dstKey)
         {
-            CopyTo(srcKey, dstKey);
-            DeleteKeyTree(srcKey.Name, true);
+            if(srcKey == null || dstKey == null) throw new IOException(AppString.W("MovedKeyUnavailable"));
+            if(srcKey.Name.Equals(dstKey.Name, StringComparison.OrdinalIgnoreCase)) return;
+            CheckIndependentPaths(srcKey.Name, dstKey.Name);
+            if(!Rmemu.Methods.ChangeHistory.TryMoveRegistration(srcKey.Name, dstKey.Name, true, out string error))
+                throw new IOException(error);
         }
 
         public static void MoveTo(string srcPath, string dstPath)
         {
-            CopyTo(srcPath, dstPath);
-            DeleteKeyTree(srcPath, true);
+            CheckIndependentPaths(srcPath, dstPath);
+            if(!Rmemu.Methods.ChangeHistory.TryMoveRegistration(srcPath, dstPath, false, out string error))
+                throw new IOException(error);
+        }
+
+        private static void CheckIndependentPaths(string source, string destination)
+        {
+            GetRootAndSubRegPath(source, out RegistryKey sourceRoot, out string sourcePath);
+            GetRootAndSubRegPath(destination, out RegistryKey destinationRoot, out string destinationPath);
+            string first = sourceRoot.Name + "\\" + sourcePath.TrimEnd('\\');
+            string second = destinationRoot.Name + "\\" + destinationPath.TrimEnd('\\');
+            if(first.Equals(second, StringComparison.OrdinalIgnoreCase) || first.StartsWith(second + "\\", StringComparison.OrdinalIgnoreCase)
+                || second.StartsWith(first + "\\", StringComparison.OrdinalIgnoreCase))
+                throw new IOException(AppString.W("KeysMustDiffer"));
         }
 
         public static RegistryKey CreateSubKey(this RegistryKey key, string subKeyName, bool writable)
@@ -77,7 +98,7 @@ namespace BluePointLilac.Methods
         /// <param name="throwOnMissingValue">找不到键值时是否抛出异常</param>
         public static void DeleteValue(string regPath, string valueName, bool throwOnMissingValue = false)
         {
-            GetRegistryKey(regPath, true)?.DeleteValue(valueName, throwOnMissingValue);
+            using(RegistryKey key = GetRegistryKey(regPath, true)) key?.DeleteValue(valueName, throwOnMissingValue);
         }
 
         /// <summary>递归删除指定注册表项及所有子项</summary>
@@ -89,7 +110,11 @@ namespace BluePointLilac.Methods
             string keyName = GetKeyName(regPath);
             try
             {
-                GetRegistryKey(dirPath, true)?.DeleteSubKeyTree(keyName);
+                using(RegistryKey parent = GetRegistryKey(dirPath, true))
+                {
+                    if(parent == null && throwOnMissingKey) throw new IOException(AppString.W("ParentKeyDeleted", dirPath));
+                    parent?.DeleteSubKeyTree(keyName, throwOnMissingKey);
+                }
             }
             catch(Exception)
             {
@@ -107,12 +132,12 @@ namespace BluePointLilac.Methods
             int index = regPath.IndexOf('\\');
             if(index > 0)
             {
-                rootPath = regPath.Substring(0, index).ToUpper();
+                rootPath = regPath.Substring(0, index).ToUpperInvariant();
                 subRegPath = regPath.Substring(index + 1);
             }
             else
             {
-                rootPath = regPath;
+                rootPath = regPath.ToUpperInvariant();
                 subRegPath = string.Empty;
             }
             switch(rootPath)
@@ -152,11 +177,7 @@ namespace BluePointLilac.Methods
             using(root)
             {
                 if(create) return root.CreateSubKey(keyPath, writable);
-                else
-                {
-                    RegTrustedInstaller.TakeRegTreeOwnerShip(keyPath);
-                    return root.OpenSubKey(keyPath, writable);
-                }
+                return root.OpenSubKey(keyPath, writable);
             }
         }
 

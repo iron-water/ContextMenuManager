@@ -9,6 +9,7 @@ namespace Rmemu.Controls
 {
     class SwitchDicList : MyList
     {
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public bool UseUserDic { get; set; }
 
         public virtual void LoadItems()
@@ -46,6 +47,7 @@ namespace Rmemu.Controls
         }
 
         private bool? useUserDic = null;
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public bool UseUserDic
         {
             get => useUserDic == true;

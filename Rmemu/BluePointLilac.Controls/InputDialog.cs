@@ -8,9 +8,12 @@ namespace BluePointLilac.Controls
     public sealed class InputDialog : CommonDialog
     {
         /// <summary>输入对话框标题</summary>
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string Title { get; set; } = Application.ProductName;
         /// <summary>输入对话框文本框文本</summary>
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string Text { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public Size Size { get; set; }
 
         public override void Reset() { }
@@ -21,10 +24,10 @@ namespace BluePointLilac.Controls
             {
                 frm.Text = Title;
                 frm.InputedText = this.Text;
-                frm.Size = this.Size;
-                Form owner = (Form)Control.FromHandle(hwndOwner);
+                if(!this.Size.IsEmpty) frm.Size = this.Size;
+                Form owner = Control.FromHandle(hwndOwner)?.FindForm();
                 if(owner != null) frm.TopMost = owner.TopMost;
-                bool flag = frm.ShowDialog() == DialogResult.OK;
+                bool flag = frm.ShowDialog(owner) == DialogResult.OK;
                 this.Text = flag ? frm.InputedText : null;
                 return flag;
             }
@@ -36,16 +39,22 @@ namespace BluePointLilac.Controls
             {
                 this.AcceptButton = btnOK;
                 this.CancelButton = btnCancel;
-                this.Font = SystemFonts.MessageBoxFont;
+                this.Font = FluentTheme.BodyFont;
                 this.SizeGripStyle = SizeGripStyle.Hide;
                 this.StartPosition = FormStartPosition.CenterParent;
                 this.MaximizeBox = MinimizeBox = ShowIcon = ShowInTaskbar = false;
-                this.Controls.AddRange(new Control[] { txtInput, btnOK, btnCancel });
-                txtInput.Font = new Font(txtInput.Font.FontFamily, txtInput.Font.Size + 2F);
+                this.AutoScaleMode = AutoScaleMode.Dpi;
                 txtInput.CanResizeFont();
                 InitializeComponents();
             }
 
+            protected override void OnLoad(EventArgs e)
+            {
+                FluentTheme.Apply(this);
+                base.OnLoad(e);
+            }
+
+            [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
             public string InputedText
             {
                 get => txtInput.Text;
@@ -54,20 +63,23 @@ namespace BluePointLilac.Controls
 
             readonly TextBox txtInput = new TextBox
             {
-                Font = SystemFonts.MenuFont,
                 ScrollBars = ScrollBars.Vertical,
-                Multiline = true
+                Multiline = true,
+                AcceptsReturn = true,
+                BorderStyle = BorderStyle.FixedSingle,
+                Dock = DockStyle.Fill,
+                TabIndex = 0
             };
             readonly Button btnOK = new Button
             {
-                Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
+                TabIndex = 1,
                 DialogResult = DialogResult.OK,
                 Text = ResourceString.OK,
                 AutoSize = true
             };
             readonly Button btnCancel = new Button
             {
-                Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
+                TabIndex = 2,
                 DialogResult = DialogResult.Cancel,
                 Text = ResourceString.Cancel,
                 AutoSize = true
@@ -75,21 +87,34 @@ namespace BluePointLilac.Controls
 
             private void InitializeComponents()
             {
-                this.SuspendLayout();
-                int a = 20.DpiZoom();
-                txtInput.Location = new Point(a, a);
-                txtInput.Size = new Size(340, 24).DpiZoom();
-                this.ClientSize = new Size(txtInput.Width + a * 2, txtInput.Height + btnOK.Height + a * 3);
-                btnCancel.Top = btnOK.Top = txtInput.Bottom + a;
-                btnCancel.Left = txtInput.Right - btnCancel.Width;
-                btnOK.Left = btnCancel.Left - btnOK.Width - a;
-                this.ResumeLayout();
-                this.MinimumSize = this.Size;
-                this.Resize += (sender, e) =>
+                SuspendLayout();
+                int inset = 20.DpiZoom();
+                var layout = new TableLayoutPanel
                 {
-                    txtInput.Width = this.ClientSize.Width - 2 * a;
-                    txtInput.Height = btnCancel.Top - 2 * a;
+                    Dock = DockStyle.Fill, Padding = new Padding(inset), ColumnCount = 1, RowCount = 2
                 };
+                layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+                layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+                layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+                var actions = new FlowLayoutPanel
+                {
+                    Dock = DockStyle.Fill, AutoSize = true, WrapContents = false,
+                    FlowDirection = FlowDirection.RightToLeft, Margin = new Padding(0, 16.DpiZoom(), 0, 0)
+                };
+                foreach(Button button in new[] { btnCancel, btnOK })
+                {
+                    button.MinimumSize = new Size(88, 30).DpiZoom();
+                    button.Padding = new Padding(12, 3, 12, 3).DpiZoom();
+                    button.Margin = new Padding(8.DpiZoom(), 0, 0, 0);
+                    actions.Controls.Add(button);
+                }
+                txtInput.Margin = Padding.Empty;
+                layout.Controls.Add(txtInput, 0, 0);
+                layout.Controls.Add(actions, 0, 1);
+                Controls.Add(layout);
+                ClientSize = new Size(440, 230).DpiZoom();
+                MinimumSize = Size;
+                ResumeLayout();
             }
         }
     }

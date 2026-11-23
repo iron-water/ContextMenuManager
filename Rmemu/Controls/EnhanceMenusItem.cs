@@ -13,10 +13,14 @@ namespace Rmemu.Controls
 {
     sealed class EnhanceShellItem : FoldSubItem, IChkVisibleItem
     {
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string RegPath { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public XmlElement ItemXE { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public VisibleCheckBox ChkVisible { get; set; }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public bool ItemVisible
         {
             get
@@ -26,10 +30,17 @@ namespace Rmemu.Controls
             }
             set
             {
-                if(value) WriteSubKeysValue(ItemXE, RegPath);
+                if(value)
+                {
+                    if(!IsSafeRegistryKeyName(RegistryEx.GetKeyName(RegPath))) throw new InvalidDataException(AppString.W("UnsafeDictKey"));
+                    WriteSubKeysValue(ItemXE, RegPath);
+                }
                 else RegistryEx.DeleteKeyTree(RegPath);
             }
         }
+
+        private static bool IsSafeRegistryKeyName(string name)
+            => !string.IsNullOrWhiteSpace(name) && !name.Contains('\\') && !name.Contains('/') && !name.Contains("..") && name.IndexOf('\0') < 0;
 
         public EnhanceShellItem()
         {
@@ -99,6 +110,7 @@ namespace Rmemu.Controls
                 foreach(XmlNode xn in subKeyXN.ChildNodes)
                 {
                     if(xn is XmlComment) continue;
+                    if(!IsSafeRegistryKeyName(xn.Name)) throw new InvalidDataException(AppString.W("UnsafeDictKeyAt", xn.Name));
                     WriteSubKeysValue(xn, $@"{regPath}\{xn.Name}");
                 }
             }
@@ -154,7 +166,7 @@ namespace Rmemu.Controls
                 {
                     case ".bat":
                     case ".cmd":
-                        encoding = Encoding.Default;
+                        encoding = CodePagesEncodingProvider.Instance.GetEncoding(0);
                         break;
                     default:
                         encoding = Encoding.Unicode;
@@ -171,11 +183,16 @@ namespace Rmemu.Controls
     sealed class EnhanceShellExItem : FoldSubItem, IChkVisibleItem
     {
         public string RegPath => $@"{ShellExPath}\ContextMenuHandlers\{DefaultKeyName}";
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string ShellExPath { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string DefaultKeyName { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public Guid Guid { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public VisibleCheckBox ChkVisible { get; set; }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public bool ItemVisible
         {
             get => ShellExItem.GetPathAndGuids(ShellExPath).Values.Contains(Guid);

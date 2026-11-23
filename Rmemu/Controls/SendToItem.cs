@@ -2,6 +2,7 @@
 using BluePointLilac.Methods;
 using Rmemu.Controls.Interfaces;
 using Rmemu.Methods;
+using System;
 using Microsoft.Win32;
 using System.Drawing;
 using System.IO;
@@ -19,13 +20,17 @@ namespace Rmemu.Controls
         }
 
         private string filePath;
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string FilePath
         {
             get => filePath;
             set
             {
+                ShellLink replacement = string.Equals(Path.GetExtension(value), ".lnk", StringComparison.OrdinalIgnoreCase) ? new ShellLink(value) : null;
+                ShellLink previous = this.ShellLink;
                 filePath = value;
-                if(IsShortcut) this.ShellLink = new ShellLink(value);
+                this.ShellLink = replacement;
+                previous?.Dispose();
                 this.Text = this.ItemText;
                 this.Image = this.ItemImage;
             }
@@ -63,6 +68,7 @@ namespace Rmemu.Controls
             }
         }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public bool ItemVisible
         {
             get => (File.GetAttributes(FilePath) & FileAttributes.Hidden) != FileAttributes.Hidden;
@@ -75,6 +81,7 @@ namespace Rmemu.Controls
             }
         }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string ItemText
         {
             get
@@ -110,6 +117,7 @@ namespace Rmemu.Controls
             }
         }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string IconLocation
         {
             get
@@ -169,18 +177,30 @@ namespace Rmemu.Controls
             }
         }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string IconPath { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public int IconIndex { get; set; }
 
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public VisibleCheckBox ChkVisible { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public MenuButton BtnShowMenu { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public ChangeTextMenuItem TsiChangeText { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public ChangeIconMenuItem TsiChangeIcon { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public WebSearchMenuItem TsiSearch { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public FilePropertiesMenuItem TsiFileProperties { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public FileLocationMenuItem TsiFileLocation { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public DeleteMeMenuItem TsiDeleteMe { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public ShortcutCommandMenuItem TsiChangeCommand { get; set; }
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public RunAsAdministratorItem TsiAdministrator { get; set; }
 
         readonly ToolStripMenuItem TsiDetails = new ToolStripMenuItem(AppString.Menu.Details);
@@ -216,11 +236,16 @@ namespace Rmemu.Controls
             };
         }
 
+        protected override void Dispose(bool disposing)
+        {
+            if(disposing) { ShellLink?.Dispose(); ShellLink = null; }
+            base.Dispose(disposing);
+        }
+
         public void DeleteMe()
         {
             File.Delete(this.FilePath);
             DesktopIni.DeleteLocalizedFileNames(FilePath);
-            this.ShellLink?.Dispose();
         }
     }
 }

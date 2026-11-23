@@ -16,8 +16,8 @@ namespace BluePointLilac.Controls
             this.Height = 30.DpiZoom();
             this.Dock = DockStyle.Bottom;
             this.Font = SystemFonts.StatusFont;
-            this.BackColor = Color.FromArgb(70, 130, 200);
-            this.ForeColor = Color.White;
+            this.BackColor = FluentTheme.Surface;
+            this.ForeColor = FluentTheme.Muted;
         }
 
         [Browsable(true), EditorBrowsable(EditorBrowsableState.Always)]
@@ -26,23 +26,10 @@ namespace BluePointLilac.Controls
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
-            string txt = this.Text;
-            int left = this.Height / 3;
-            for(int i = this.Text.Length - 1; i >= 0; i--)
-            {
-                Size size = TextRenderer.MeasureText(txt, this.Font);
-                if(size.Width < ClientSize.Width - 2 * left)
-                {
-                    using(Brush brush = new SolidBrush(this.ForeColor))
-                    {
-                        int top = (this.Height - size.Height) / 2;
-                        e.Graphics.Clear(this.BackColor);
-                        e.Graphics.DrawString(txt, this.Font, brush, left, top);
-                        break;
-                    }
-                }
-                txt = this.Text.Substring(0, i) + "...";
-            }
+            Rectangle bounds = new Rectangle(12.DpiZoom(), 0, Math.Max(0, ClientSize.Width - 24.DpiZoom()), ClientSize.Height);
+            TextRenderer.DrawText(e.Graphics, Text, Font, bounds, ForeColor,
+                TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
+            using(Pen pen = new Pen(FluentTheme.Border)) e.Graphics.DrawLine(pen, 0, 0, Width, 0);
         }
 
         protected override void OnResize(EventArgs e)

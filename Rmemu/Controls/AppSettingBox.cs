@@ -170,15 +170,15 @@ namespace Rmemu.Controls
             cmbRepo.SelectedIndex = AppConfig.RequestUseGithub ? 0 : 1;
             cmbUpdate.SelectedIndex = GetUpdateSelectIndex();
             cmbEngine.SelectedIndex = GetEngineSelectIndex();
-            chkBackup.Checked = AppConfig.AutoBackup;
-            chkTopMost.Checked = this.FindForm().TopMost;
-            chkProtect.Checked = AppConfig.ProtectOpenItem;
-            chkWinXSortable.Checked = AppConfig.WinXSortable;
-            chkShowFilePath.Checked = AppConfig.ShowFilePath;
-            chkOpenMoreRegedit.Checked = AppConfig.OpenMoreRegedit;
-            chkOpenMoreExplorer.Checked = AppConfig.OpenMoreExplorer;
-            chkHideDisabledItems.Checked = AppConfig.HideDisabledItems;
-            chkHideSysStoreItems.Checked = AppConfig.HideSysStoreItems;
+            chkBackup.SetCheckedSilently(AppConfig.AutoBackup);
+            chkTopMost.SetCheckedSilently(this.FindForm()?.TopMost ?? AppConfig.TopMost);
+            chkProtect.SetCheckedSilently(AppConfig.ProtectOpenItem);
+            chkWinXSortable.SetCheckedSilently(AppConfig.WinXSortable);
+            chkShowFilePath.SetCheckedSilently(AppConfig.ShowFilePath);
+            chkOpenMoreRegedit.SetCheckedSilently(AppConfig.OpenMoreRegedit);
+            chkOpenMoreExplorer.SetCheckedSilently(AppConfig.OpenMoreExplorer);
+            chkHideDisabledItems.SetCheckedSilently(AppConfig.HideDisabledItems);
+            chkHideSysStoreItems.SetCheckedSilently(AppConfig.HideSysStoreItems);
         }
 
         private void ChangeConfigDir()

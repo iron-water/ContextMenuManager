@@ -10,38 +10,21 @@ using System.Windows.Forms;
 
 namespace Rmemu
 {
-    sealed class MainForm : MyMainForm
+    sealed partial class MainForm : MyMainForm
     {
         public MainForm()
         {
             this.TopMost = AppConfig.TopMost;
             this.Size = AppConfig.MainFormSize;
-            this.Text = AppString.General.AppName;
+            this.Text = "Rmemu";
             this.Controls.Add(explorerRestarter);
-            ToolBar.AddButtons(ToolBarButtons);
             MainBody.Controls.AddRange(MainControls);
-            ToolBarButtons[3].CanBeSelected = false;
-            ToolBarButtons[3].MouseDown += (sender, e) => RefreshApp();
-            ToolBar.SelectedButtonChanged += (sender, e) => SwitchTab();
-            SideBar.HoverIndexChanged += (sender, e) => ShowItemInfo();
-            SideBar.SelectIndexChanged += (sender, e) => SwitchItem();
             this.Shown += (sender, e) => FirstRunDownloadLanguage();
             this.FormClosing += (sender, e) => CloseMainForm();
-            HoveredToShowItemPath();
             DragDropToAnalysis();
-            AddContextMenus();
-            ResizeSideBar();
-            JumpItem(0, 0);
+            InitializeWorkspace();
         }
 
-        readonly MyToolBarButton[] ToolBarButtons =
-        {
-            new MyToolBarButton(AppImage.Home, AppString.ToolBar.Home),
-            new MyToolBarButton(AppImage.Type, AppString.ToolBar.Type),
-            new MyToolBarButton(AppImage.Star, AppString.ToolBar.Rule),
-            new MyToolBarButton(AppImage.Refresh, AppString.ToolBar.Refresh),
-            new MyToolBarButton(AppImage.About, AppString.ToolBar.About)
-        };
 
         private Control[] MainControls => new Control[]
         {
@@ -168,16 +151,6 @@ namespace Rmemu
             AppString.SideBar.Donate
         };
 
-        static readonly string[] SettingItems =
-        {
-            AppString.Other.TopMost,
-            null,
-            AppString.Other.ShowFilePath,
-            AppString.Other.HideDisabledItems,
-            null,
-            AppString.Other.OpenMoreRegedit,
-            AppString.Other.OpenMoreExplorer,
-        };
 
         static readonly ShellList.Scenes[] GeneralShellScenes =
         {
@@ -207,47 +180,12 @@ namespace Rmemu
             ShellList.Scenes.MenuAnalysis
         };
 
-        readonly int[] lastItemIndex = new int[5];
+        internal int SelectedCategory { get; private set; }
+        internal int SelectedLocation { get; private set; }
 
-        public void JumpItem(int toolBarIndex, int sideBarIndex)
-        {
-            bool flag1 = ToolBar.SelectedIndex == toolBarIndex;
-            bool flag2 = SideBar.SelectedIndex == sideBarIndex;
-            lastItemIndex[toolBarIndex] = sideBarIndex;
-            ToolBar.SelectedIndex = toolBarIndex;
-            if(flag1 || flag2)
-            {
-                SideBar.SelectedIndex = sideBarIndex;
-                SwitchItem();
-            }
-        }
+        public void JumpItem(int category, int location) => Navigate(category, location);
 
-        private void RefreshApp()
-        {
-            this.Cursor = Cursors.WaitCursor;
-            ObjectPath.FilePathDic.Clear();
-            AppConfig.ReloadConfig();
-            GuidInfo.ReloadDics();
-            XmlDicHelper.ReloadDics();
-            this.SwitchItem();
-            this.Cursor = Cursors.Default;
-        }
 
-        private void SwitchTab()
-        {
-            switch(ToolBar.SelectedIndex)
-            {
-                case 0:
-                    SideBar.ItemNames = GeneralItems; break;
-                case 1:
-                    SideBar.ItemNames = TypeItems; break;
-                case 2:
-                    SideBar.ItemNames = OtherRuleItems; break;
-                case 4:
-                    SideBar.ItemNames = AboutItems; break;
-            }
-            SideBar.SelectedIndex = lastItemIndex[ToolBar.SelectedIndex];
-        }
 
         private void SwitchItem()
         {
@@ -256,8 +194,8 @@ namespace Rmemu
                 ctr.Visible = false;
                 if(ctr is MyList list) list.ClearItems();
             }
-            if(SideBar.SelectedIndex == -1) return;
-            switch(ToolBar.SelectedIndex)
+            if(SelectedLocation == -1) return;
+            switch(SelectedCategory)
             {
                 case 0:
                     SwitchGeneralItem(); break;
@@ -268,48 +206,10 @@ namespace Rmemu
                 case 4:
                     SwitchAboutItem(); break;
             }
-            lastItemIndex[ToolBar.SelectedIndex] = SideBar.SelectedIndex;
-            this.SuspendMainBodyWhenMove = MainControls.ToList().Any(ctr => ctr.Controls.Count > 50);
+            this.SuspendMainBodyWhenMove = false;
+            WorkspaceChanged();
         }
 
-        private void ShowItemInfo()
-        {
-            if(SideBar.HoveredIndex >= 0)
-            {
-                int i = SideBar.HoveredIndex;
-                switch(ToolBar.SelectedIndex)
-                {
-                    case 0:
-                        StatusBar.Text = GeneralItemInfos[i]; return;
-                    case 1:
-                        StatusBar.Text = TypeItemInfos[i]; return;
-                    case 2:
-                        StatusBar.Text = OtherRuleItemInfos[i]; return;
-                }
-            }
-            StatusBar.Text = MyStatusBar.DefaultText;
-        }
-
-        private void HoveredToShowItemPath()
-        {
-            foreach(Control ctr in MainBody.Controls)
-            {
-                if(ctr is MyList list && list != appSettingBox)
-                {
-                    list.HoveredItemChanged += (sender, e) =>
-                    {
-                        if(!AppConfig.ShowFilePath) return;
-                        MyListItem item = list.HoveredItem;
-                        foreach(string prop in new[] { "ItemFilePath", "RegPath", "GroupPath", "SelectedPath" })
-                        {
-                            string path = item.GetType().GetProperty(prop)?.GetValue(item, null)?.ToString();
-                            if(!path.IsNullOrWhiteSpace()) { StatusBar.Text = path; return; }
-                        }
-                        StatusBar.Text = item.Text;
-                    };
-                }
-            }
-        }
 
         private void DragDropToAnalysis()
         {
@@ -323,7 +223,7 @@ namespace Rmemu
 
         private void SwitchGeneralItem()
         {
-            switch(SideBar.SelectedIndex)
+            switch(SelectedLocation)
             {
                 case 11:
                     shellNewList.LoadItems(); shellNewList.Visible = true; break;
@@ -334,21 +234,21 @@ namespace Rmemu
                 case 15:
                     winXList.LoadItems(); winXList.Visible = true; break;
                 default:
-                    shellList.Scene = GeneralShellScenes[SideBar.SelectedIndex];
+                    shellList.Scene = GeneralShellScenes[SelectedLocation];
                     shellList.LoadItems(); shellList.Visible = true; break;
             }
         }
 
         private void SwitchTypeItem()
         {
-            shellList.Scene = (ShellList.Scenes)TypeShellScenes[SideBar.SelectedIndex];
+            shellList.Scene = (ShellList.Scenes)TypeShellScenes[SelectedLocation];
             shellList.LoadItems();
             shellList.Visible = true;
         }
 
         private void SwitchOtherRuleItem()
         {
-            switch(SideBar.SelectedIndex)
+            switch(SelectedLocation)
             {
                 case 0:
                     enhanceMenusList.ScenePath = null; enhanceMenusList.LoadItems(); enhanceMenusList.Visible = true; break;
@@ -369,7 +269,7 @@ namespace Rmemu
 
         private void SwitchAboutItem()
         {
-            switch(SideBar.SelectedIndex)
+            switch(SelectedLocation)
             {
                 case 0:
                     appSettingBox.LoadItems(); appSettingBox.Visible = true;
@@ -381,100 +281,13 @@ namespace Rmemu
                     dictionariesBox.LoadText(); dictionariesBox.Visible = true;
                     break;
                 case 3:
-                    if(aboutMeBox.TextLength == 0) aboutMeBox.LoadIni(AppString.Other.AboutApp);
+                    if(aboutMeBox.TextLength == 0) aboutMeBox.Text = AppString.W("AboutText");
                     aboutMeBox.Visible = true; break;
                 case 4:
                     donateBox.Visible = true; break;
             }
         }
 
-        private void ResizeSideBar()
-        {
-            SideBar.Width = 0;
-            string[] strs = GeneralItems.Concat(TypeItems).Concat(OtherRuleItems).Concat(AboutItems).ToArray();
-            Array.ForEach(strs, str => SideBar.Width = Math.Max(SideBar.Width, SideBar.GetItemWidth(str)));
-        }
-
-        private void AddContextMenus()
-        {
-            var dic = new Dictionary<MyToolBarButton, string[]>
-            {
-                { ToolBarButtons[0], GeneralItems },
-                { ToolBarButtons[1], TypeItems },
-                { ToolBarButtons[2], OtherRuleItems },
-                { ToolBarButtons[4], SettingItems }
-            };
-
-            foreach(var item in dic)
-            {
-                ContextMenuStrip cms = new ContextMenuStrip();
-                cms.MouseEnter += (sender, e) =>
-                {
-                    if(item.Key != ToolBar.SelectedButton) item.Key.Opacity = 0.2F;
-                };
-                cms.Closed += (sender, e) =>
-                {
-                    if(item.Key != ToolBar.SelectedButton) item.Key.Opacity = 0;
-                };
-                item.Key.MouseDown += (sender, e) =>
-                {
-                    if(e.Button != MouseButtons.Right) return;
-                    if(sender == ToolBar.SelectedButton) return;
-                    cms.Show(item.Key, e.Location);
-                };
-                for(int i = 0; i < item.Value.Length; i++)
-                {
-                    if(item.Value[i] == null) cms.Items.Add(new ToolStripSeparator());
-                    else
-                    {
-                        ToolStripMenuItem tsi = new ToolStripMenuItem(item.Value[i]);
-                        cms.Items.Add(tsi);
-                        int toolBarIndex = ToolBar.Controls.GetChildIndex(item.Key);
-                        int index = i;
-                        if(toolBarIndex != 4)
-                        {
-                            tsi.Click += (sender, e) => JumpItem(toolBarIndex, index);
-                            cms.Opening += (sender, e) => tsi.Checked = lastItemIndex[toolBarIndex] == index;
-                        }
-                        else
-                        {
-                            tsi.Click += (sender, e) =>
-                            {
-                                switch(index)
-                                {
-                                    case 0:
-                                        AppConfig.TopMost = this.TopMost = !tsi.Checked; break;
-                                    case 2:
-                                        AppConfig.ShowFilePath = !tsi.Checked; break;
-                                    case 3:
-                                        AppConfig.HideDisabledItems = !tsi.Checked; SwitchItem(); break;
-                                    case 5:
-                                        AppConfig.OpenMoreRegedit = !tsi.Checked; break;
-                                    case 6:
-                                        AppConfig.OpenMoreExplorer = !tsi.Checked; break;
-                                }
-                            };
-                            cms.Opening += (sender, e) =>
-                            {
-                                switch(index)
-                                {
-                                    case 0:
-                                        tsi.Checked = this.TopMost; break;
-                                    case 2:
-                                        tsi.Checked = AppConfig.ShowFilePath; break;
-                                    case 3:
-                                        tsi.Checked = AppConfig.HideDisabledItems; break;
-                                    case 5:
-                                        tsi.Checked = AppConfig.OpenMoreRegedit; break;
-                                    case 6:
-                                        tsi.Checked = AppConfig.OpenMoreExplorer; break;
-                                }
-                            };
-                        }
-                    }
-                }
-            }
-        }
 
         private void FirstRunDownloadLanguage()
         {
@@ -493,8 +306,8 @@ namespace Rmemu
 
         private void CloseMainForm()
         {
-            if(explorerRestarter.Visible && AppMessageBox.Show(explorerRestarter.Text,
-                MessageBoxButtons.OKCancel) == DialogResult.OK) ExternalProgram.RestartExplorer();
+            if(explorerRestarter.Visible && AppMessageBox.Show(AppString.W("CloseRestartConfirm"), MessageBoxButtons.OKCancel) == DialogResult.OK)
+                ExternalProgram.RestartExplorer();
             this.Opacity = 0;
             this.WindowState = FormWindowState.Normal;
             explorerRestarter.Visible = false;
